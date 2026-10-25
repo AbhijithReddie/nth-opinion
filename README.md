@@ -485,7 +485,44 @@ are tracked separately: 5 debates, 40 room messages and 10 summaries.
 **Deploying behind a proxy:** run uvicorn with `--proxy-headers` (and
 `--forwarded-allow-ips` set to your proxy) so rate limiting sees the real
 client IP. The rate limiter is in-memory, so it resets on restart and is per
-process.
+process. See [Deploying the backend on Render](#deploying-the-backend-on-render).
+
+## Deploying the backend on Render
+
+Create a **Web Service** from this repo with these settings:
+
+| Setting           | Value |
+| ----------------- | ----- |
+| Language          | Python 3 |
+| Root Directory    | `backend` |
+| Build Command     | `pip install -r requirements.txt` |
+| Start Command     | `uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"` |
+| Health Check Path | `/health` |
+
+`--proxy-headers --forwarded-allow-ips="*"` makes uvicorn take the visitor's IP
+from Render's `X-Forwarded-For` header, so each visitor gets their own rate
+limit instead of everyone sharing the proxy's. Keep a single uvicorn worker
+(the default): the rate limiter lives in memory and isn't shared between
+workers. `/health` returns immediately without calling the model.
+
+Environment variables (set them in the service's **Environment** tab; `.env`
+is not deployed):
+
+| Variable                | Required |
+| ----------------------- | -------- |
+| `GOOGLE_API_KEY`        | Yes |
+| `GEMINI_MODEL`          | Recommended (has a built-in default) |
+| `FRONTEND_ORIGIN`       | Yes: your frontend's URL(s), comma-separated |
+| `GEMINI_FALLBACK_MODEL` | Optional |
+| `DIRECTOR_MODEL`        | Optional |
+| `LANGSMITH_TRACING`     | Optional |
+| `LANGSMITH_API_KEY`     | Only when tracing is on |
+| `LANGSMITH_PROJECT`     | Optional |
+| `PYTHON_VERSION`        | Recommended: the Python version you develop with (3.10 or newer) |
+
+See [Configure environment variables](#2-configure-environment-variables) for
+what each one does. `FRONTEND_ORIGIN` entries are trimmed and trailing slashes
+are removed, so `https://a.example.com/, https://b.example.com` works.
 
 ## Disclaimer
 

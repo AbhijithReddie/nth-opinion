@@ -26,6 +26,8 @@ SSE events sent by /api/rooms/{room_id}/message:
     error       {"message"}
 
 Run with:  uvicorn main:app --port 8000
+Behind a proxy (e.g. Render):
+    uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
 """
 
 import asyncio
@@ -189,7 +191,14 @@ summary_limiter = RateLimiter(
 
 
 def _client_ip(request: Request) -> str:
-    # Behind a proxy, start uvicorn with --proxy-headers so this is the real client IP.
+    """The visitor's IP, used as the rate-limit key.
+
+    Behind Render's proxy, uvicorn runs with --proxy-headers --forwarded-allow-ips="*",
+    so its ProxyHeadersMiddleware has already replaced request.client with the
+    first address in X-Forwarded-For (the original visitor). We deliberately don't
+    parse X-Forwarded-For here: without those flags (e.g. local dev) the header
+    is ignored, so a client can't fake it to dodge the limits.
+    """
     return request.client.host if request.client else "unknown"
 
 

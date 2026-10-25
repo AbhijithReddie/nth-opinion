@@ -1,10 +1,13 @@
-langgraph>=0.2
-langchain-core>=0.3
-langchain-google-genai>=2.0
+# Python 3.10+ (the code uses `X | None` type hints).
+langgraph>=1.0
+langchain-core>=1.0
+# 4.4+ for GoogleRateLimitError/GoogleInvalidRequestError, thinking_level and model profiles (llm.py)
+langchain-google-genai>=4.4
 langsmith>=0.1
-pydantic>=2.0
+pydantic>=2.7
 python-dotenv>=1.0
 fastapi>=0.115
+# 0.30+: with --forwarded-allow-ips="*", request.client is the first X-Forwarded-For address
 uvicorn[standard]>=0.30
 sse-starlette>=2.1
 httpx>=0.27
