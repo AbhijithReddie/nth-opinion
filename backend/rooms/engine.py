@@ -82,6 +82,20 @@ class Mode:
 
 
 @dataclass(frozen=True)
+class ContextField:
+    """Extra details the user fills in when setting up a room (a startup's name, a resume, a study topic).
+
+    They are sent with every request as `context` and shown to the director,
+    every persona and the summary, so the whole room knows them.
+    """
+
+    id: str
+    label: str  # how prompts and error messages refer to it, e.g. "Startup name"
+    max_length: int = 200
+    required: bool = True
+
+
+@dataclass(frozen=True)
 class SummarySpec:
     """The room's final structured output (a poll, scores, investor offers, ...)."""
 
@@ -103,6 +117,7 @@ class RoomConfig:
     min_participants: int = 3
     max_participants: int = 4
     modes: tuple[Mode, ...] = ()
+    context_fields: tuple[ContextField, ...] = ()
     summary: SummarySpec | None = None
     reaction_emojis: tuple[str, ...] = ("❤️", "😂", "👍", "😮", "😢", "🔥", "💯", "🙏", "👀", "😭")
     max_messages: int = 6  # persona messages per user message
@@ -127,6 +142,10 @@ class RoomConfig:
             "max_participants": self.max_participants,
             "languages": list(self.languages),
             "modes": [{"id": m.id, "title": m.title} for m in self.modes],
+            "context_fields": [
+                {"id": f.id, "label": f.label, "max_length": f.max_length, "required": f.required}
+                for f in self.context_fields
+            ],
             "has_summary": self.summary is not None,
         }
 
@@ -134,12 +153,28 @@ class RoomConfig:
         """A user-facing error message, or None if the chosen personas are valid."""
         ids = [p["id"] for p in participants]
         if not self.min_participants <= len(ids) <= self.max_participants:
+            if self.min_participants == self.max_participants:
+                return f"This room needs exactly {self.min_participants} people."
             return f"Pick between {self.min_participants} and {self.max_participants} people for this room."
         if len(set(ids)) != len(ids):
             return "Each person can only be added once."
         unknown = [i for i in ids if self.persona(i) is None]
         if unknown:
             return f"Unknown persona: {', '.join(unknown)}."
+        return None
+
+    def validate_context(self, context: dict[str, str]) -> str | None:
+        """A user-facing error message, or None if the room's context fields are valid."""
+        known = {f.id for f in self.context_fields}
+        extra = [k for k in context if k not in known]
+        if extra:
+            return f"Unknown detail: {', '.join(extra)}."
+        for f in self.context_fields:
+            value = context.get(f.id, "").strip()
+            if f.required and not value:
+                return f"{f.label} is required."
+            if len(value) > f.max_length:
+                return f"{f.label} must be at most {f.max_length} characters."
         return None
 
 
@@ -182,6 +217,7 @@ class RoomState(TypedDict, total=False):
 
     room_id: str
     language: str
+    context: dict[str, str]  # the room's context fields (see ContextField)
     mode: str | None
     participants: list[dict]  # [{"id", "name"}] in the user's chosen order
     history: list[ChatMessage]  # recent history, ending with the user's new message
@@ -281,6 +317,12 @@ def _clean_reply(text: str, max_words: int) -> str:
     return text[:600]
 
 
+def _context_block(room: RoomConfig, context: dict[str, str]) -> str:
+    """The room's context fields as prompt lines, or "" when the room has none."""
+    lines = [f"- {f.label}: {context[f.id].strip()}" for f in room.context_fields if context.get(f.id, "").strip()]
+    return "Details from the user:\n" + "\n".join(lines) + "\n" if lines else ""
+
+
 def _turn_stats(state: RoomState) -> dict:
     """Counts the director's rules depend on."""
     new = state.get("new_messages", [])
@@ -355,6 +397,7 @@ participants. You never write messages yourself. Each time you are called you ch
 Participants:
 {cast}
 {modes}
+{_context_block(room, state.get("context", {}))}
 How to choose:
 - NOT round-robin. Pick whoever would most naturally respond right now: someone who was @mentioned or asked \
 a question, someone with a strong opinion on this, someone who would disagree with the last message, or \
@@ -564,6 +607,7 @@ Your usual take: {persona.stance}
 The others in the conversation:
 {others}
 
+{_context_block(room, state.get("context", {}))}
 Language: {room.languages[state["language"]]}
 {f"Current mode - {mode.title}: {mode.instructions}" if mode else ""}
 Format: ONE chat message, at most about {room.max_words} words. Plain text only: no "{me}:" prefix, no \
@@ -690,6 +734,7 @@ async def stream_turn(
     language: str,
     message_id: str | None = None,
     mode: str | None = None,
+    context: dict[str, str] | None = None,
 ) -> AsyncIterator[tuple[str, dict]]:
     """Run one user message through the room graph, yielding (event, data) as they happen.
 
@@ -702,6 +747,7 @@ async def stream_turn(
     state: RoomState = {
         "room_id": room.id,
         "language": language,
+        "context": context or {},
         "mode": mode if mode in valid_modes else (valid_modes[0] if valid_modes else None),
         "participants": participants,
         "history": _recent_history(room, history) + [user_msg],
@@ -723,7 +769,14 @@ class SummaryError(Exception):
     """The summary could not be produced. str() is safe to show to users."""
 
 
-async def summarize(room: RoomConfig, *, history: list[dict], participants: list[dict], language: str) -> dict:
+async def summarize(
+    room: RoomConfig,
+    *,
+    history: list[dict],
+    participants: list[dict],
+    language: str,
+    context: dict[str, str] | None = None,
+) -> dict:
     """One structured-output LLM call that turns the conversation into the room's final output."""
     spec = room.summary
     if spec is None:
@@ -744,6 +797,7 @@ async def summarize(room: RoomConfig, *, history: list[dict], participants: list
 Participants:
 {cast}
 
+{_context_block(room, context or {})}
 Language for all text: {room.languages[language]}
 {GUARDRAILS}"""
     result = await invoke(

@@ -4,8 +4,8 @@ import { useCallback, useId, useRef, useState } from "react";
 import { useDismiss } from "@/hooks/useDismiss";
 import { MoreIcon, PencilIcon, TrashIcon } from "../icons";
 
-/** The chat header's "⋮" menu: Edit group, Clear chat. */
-export function ChatMenu({ onEditGroup, onClearChat }: { onEditGroup: () => void; onClearChat: () => void }) {
+/** The chat header's "⋮" menu: edit the room setup, clear the chat. */
+export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string; onEdit: () => void; onClearChat: () => void }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -55,11 +55,11 @@ export function ChatMenu({ onEditGroup, onClearChat }: { onEditGroup: () => void
             const next = (items.indexOf(document.activeElement as HTMLButtonElement) + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
             items[next]?.focus();
           }}
-          className="animate-fade-in absolute top-full right-0 z-20 mt-1 w-48 rounded-xl border border-white/[0.08] bg-arena-800 p-1 shadow-2xl shadow-black/60"
+          className="animate-fade-in absolute top-full right-0 z-20 mt-1 w-52 rounded-xl border border-white/[0.08] bg-arena-800 p-1 shadow-2xl shadow-black/60"
         >
           <li role="none">
-            <button type="button" role="menuitem" onClick={() => choose(onEditGroup)} className={itemClass}>
-              <PencilIcon className="size-4 text-muted" /> Edit group
+            <button type="button" role="menuitem" onClick={() => choose(onEdit)} className={itemClass}>
+              <PencilIcon className="size-4 text-muted" /> {editLabel}
             </button>
           </li>
           <li role="none">

@@ -11,7 +11,8 @@ going round-robin.
 | ---- | ------ |
 | **Debate Arena**: PRO and CON argue any motion for 1-3 rounds, then a judge scores them | Live |
 | **The Group Chat**: share a problem with a WhatsApp-style group of AI friends | Live |
-| Shark Tank Pitch Room, Interview Panel, Future You, Roast & Toast, Study Group | Coming soon |
+| **Shark Tank Pitch Room**: pitch your startup to 3 investors who grill you, then make offers | Live |
+| Interview Panel, Future You, Roast & Toast, Study Group | Coming soon |
 
 The backend is FastAPI + LangGraph (Gemini models, optional LangSmith tracing),
 streaming over Server-Sent Events. The frontend is Next.js + Tailwind.
@@ -28,6 +29,7 @@ backend/
     engine.py         the shared room engine (LangGraph director loop, summary)
     safety.py         crisis detection, supportive mode, guardrails for every persona
     group_chat.py     The Group Chat room: personas, languages, poll
+    shark_tank.py     The Shark Tank room: investors, pitch details, offers
   run_cli.py          Debate Arena in the terminal
   chat_cli.py         Group Chat in the terminal
   test_stream.py      smoke test for the debate SSE stream
@@ -125,7 +127,8 @@ if the styles look stale.
 | `/` | Home: hero, room grid, how it works |
 | `/debate` | Debate Arena |
 | `/rooms/group-chat` | The Group Chat |
-| `/rooms/shark-tank`, `/rooms/interview-panel`, `/rooms/future-you`, `/rooms/roast-and-toast`, `/rooms/study-group` | Coming soon |
+| `/rooms/shark-tank` | Shark Tank Pitch Room |
+| `/rooms/interview-panel`, `/rooms/future-you`, `/rooms/roast-and-toast`, `/rooms/study-group` | Coming soon |
 | `/about` | About, agent diagram, disclaimer |
 
 ### Frontend layout
@@ -135,16 +138,17 @@ frontend/
   public/                 huddle-logo.svg (logo + wordmark), huddle-icon.svg, favicon.svg
   src/config/
     rooms.ts              every room's id, title, icon, description, status and route
-    friends.ts            the six Group Chat friends + languages (ids match the backend)
+    personas.ts           each chat room's personas (ids match the backend)
+    roomChats.ts          per-room chat config: cast rules, setup fields, wording, summary type
     site.ts               name, tagline, GitHub URL (placeholder), disclaimer
   src/app/                routes (see table above) + opengraph-image.tsx (link preview)
   src/components/
     layout/               Navbar, Rooms dropdown, mobile drawer
     home/ about/ rooms/   page sections, coming-soon page
-    chat/                 Group Chat UI (setup screen, messages, poll, composer, ...)
+    chat/                 shared chat-room UI (setup screen, messages, poll / offers cards, composer, ...)
     debate/ landing/      Debate Arena UI
     ui/ brand/            buttons, badges, headings, the logo mark
-  src/hooks/useGroupChat.ts   chat state, SSE pacing, cancel-on-new-message, localStorage
+  src/hooks/useRoomChat.ts    chat state, SSE pacing, cancel-on-new-message, localStorage
   src/lib/sseClient.ts        shared POST + SSE reader used by the debate and the rooms
 ```
 
@@ -246,9 +250,30 @@ That's it. `GET /api/rooms` lists it, and `/api/rooms/roast-and-toast/message`
 and `/summary` work right away with the same safety layer, director loop,
 streaming, validation and rate limits. Tunables such as `max_messages`,
 `max_reactions`, `max_in_a_row`, `max_words` and `reaction_emojis` have
-defaults on `RoomConfig` and can be overridden per room. If a room needs extra
-request fields (for example a resume), add them to the request models in
-`main.py` and pass them through to the engine.
+defaults on `RoomConfig` and can be overridden per room.
+
+If a room needs details from the user (a startup's name and ask, a resume, a
+study topic), declare them as `context_fields`:
+
+```python
+context_fields=(
+    ContextField(id="startup", label="Startup name", max_length=60),
+    ContextField(id="ask", label="The founder's ask", max_length=80),
+),
+```
+
+Clients send them as `"context": {"startup": "...", "ask": "..."}`. The API
+validates them, and the engine shows them to the director, every persona and
+the summary. See `shark_tank.py`.
+
+**Frontend:** a chat room needs:
+
+1. An entry in `frontend/src/config/roomChats.ts` (cast, setup fields, wording, summary type).
+2. Its personas in `config/personas.ts`.
+3. A page that renders `<RoomChatLoader roomId="..." />`.
+4. Its status set to `"live"` in `config/rooms.ts`.
+
+A new kind of summary also needs a card component in `components/chat/`.
 
 ## API
 
@@ -325,6 +350,11 @@ SSE events:
 If the client disconnects (for example the user sends a new message
 mid-reply and the browser aborts the request), generation stops.
 
+Rooms with context fields also need `context`. Shark Tank requires
+`{"startup": "...", "ask": "..."}`, and `sector` is optional. The participants
+must be exactly `kavya`, `aditya` and `rustom`. Sending `participants` instead
+of `friends` also works.
+
 ### `POST /api/rooms/{room_id}/summary`
 
 Same body without `message`. The Group Chat returns a poll:
@@ -334,6 +364,23 @@ Same body without `message`. The Group Chat returns a poll:
   "question": "Should you text your ex?",
   "options": ["Text a short wish", "Don't text"],
   "votes": [ { "friend_id": "rohit", "option": "Don't text", "reason": "bro. no. we talked about this." } ]
+}
+```
+
+Shark Tank returns the investors' decisions (amounts in ₹ lakhs). An offer
+without a valid amount and equity is turned into `"out"`:
+
+```json
+{
+  "summary": "Real traction, thin moat.",
+  "strengths": ["₹8 lakh monthly revenue"],
+  "concerns": ["Easy to copy"],
+  "decisions": [
+    { "friend_id": "kavya", "decision": "offer", "amount_lakh": 50, "equity_percent": 10,
+      "conditions": "2% royalty until recouped", "reason": "Your numbers hold up." },
+    { "friend_id": "rustom", "decision": "out", "amount_lakh": null, "equity_percent": null,
+      "conditions": null, "reason": "No moat. I'm out." }
+  ]
 }
 ```
 

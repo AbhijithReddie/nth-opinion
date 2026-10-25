@@ -1,12 +1,13 @@
-import type { ChatReaction, GroupSetup } from "@/lib/chatTypes";
-import { senderName } from "./chatNames";
+import type { ChatReaction } from "@/lib/chatTypes";
+import { useRoom } from "./RoomContext";
 
 /** Emoji reactions under a message, grouped by emoji ("❤️ 2"), with who reacted in the tooltip. */
-export function Reactions({ reactions, setup, alignRight }: { reactions: ChatReaction[]; setup: GroupSetup; alignRight: boolean }) {
+export function Reactions({ reactions, alignRight }: { reactions: ChatReaction[]; alignRight: boolean }) {
+  const { nameOf } = useRoom();
   if (reactions.length === 0) return null;
 
   const groups = new Map<string, string[]>();
-  for (const r of reactions) groups.set(r.emoji, [...(groups.get(r.emoji) ?? []), senderName(setup, r.friendId)]);
+  for (const r of reactions) groups.set(r.emoji, [...(groups.get(r.emoji) ?? []), nameOf(r.friendId)]);
 
   return (
     <ul className={`-mt-1.5 flex flex-wrap gap-1 ${alignRight ? "justify-end pr-2" : "pl-2"}`}>

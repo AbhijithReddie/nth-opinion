@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { GroupChatLoader } from "@/components/chat/GroupChatLoader";
+import { RoomChatLoader } from "@/components/chat/RoomChatLoader";
 import { getRoom } from "@/config/rooms";
 
 const room = getRoom("group-chat");
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 
 /** /rooms/group-chat. No footer: the chat fills the screen like a messaging app. */
 export default function GroupChatPage() {
-  return <GroupChatLoader />;
+  return <RoomChatLoader roomId="group-chat" />;
 }

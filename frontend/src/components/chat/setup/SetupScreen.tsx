@@ -1,98 +1,143 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { FRIENDS, FRIENDS_BY_ID, MAX_FRIENDS, MIN_FRIENDS, type FriendId, type Language } from "@/config/friends";
-import type { GroupFriend, GroupSetup } from "@/lib/chatTypes";
+import { personaById, type Language, type RoomChatConfig } from "@/config/roomChats";
+import type { RoomSetup } from "@/lib/chatTypes";
 import { Button } from "../../ui/Button";
-import { FriendPickerCard } from "./FriendPickerCard";
 import { LanguagePicker } from "./LanguagePicker";
+import { PersonaCard } from "./PersonaCard";
+import { TextField } from "./TextField";
 
-const DEFAULT_GROUP_NAME = "The Gang";
-const GROUP_NAME_MAX = 40;
-const DEFAULT_FRIENDS: FriendId[] = ["rohit", "priya", "meera"];
-
-/** Create (or edit) the group: pick 3-4 friends, rename them, choose a language, name the group. */
+/**
+ * Create (or edit) a room: the title, the room's extra details (context fields),
+ * the cast (picked and renamed, or a fixed panel), and the language.
+ */
 export function SetupScreen({
+  config,
   initial,
   onSave,
   onCancel,
 }: {
-  initial: GroupSetup | null;
-  onSave: (setup: GroupSetup) => void;
-  /** Present when editing an existing group. */
+  config: RoomChatConfig;
+  initial: RoomSetup | null;
+  onSave: (setup: RoomSetup) => void;
+  /** Present when editing an existing room. */
   onCancel?: () => void;
 }) {
-  const [groupName, setGroupName] = useState(initial?.groupName ?? DEFAULT_GROUP_NAME);
+  const { cast, copy } = config;
+  const fixedCast = cast.min === config.personas.length; // e.g. Shark Tank: always all three investors
+  const titleRequired = !!config.title.contextKey;
+
+  const [title, setTitle] = useState(initial?.title ?? config.title.default);
+  const [context, setContext] = useState<Record<string, string>>(initial?.context ?? {});
   const [language, setLanguage] = useState<Language>(initial?.language ?? "english");
-  const [selected, setSelected] = useState<FriendId[]>(initial?.friends.map((f) => f.id) ?? DEFAULT_FRIENDS);
-  // Chosen names for every friend, so renames survive deselecting and reselecting.
-  const [names, setNames] = useState<Record<FriendId, string>>(() => {
-    const all = Object.fromEntries(FRIENDS.map((f) => [f.id, f.name])) as Record<FriendId, string>;
-    for (const f of initial?.friends ?? []) all[f.id] = f.name;
+  const [selected, setSelected] = useState<string[]>(initial?.participants.map((p) => p.id) ?? cast.defaults);
+  // Chosen names for every persona, so renames survive deselecting and reselecting.
+  const [names, setNames] = useState<Record<string, string>>(() => {
+    const all = Object.fromEntries(config.personas.map((p) => [p.id, p.name]));
+    for (const p of initial?.participants ?? []) all[p.id] = p.name;
     return all;
   });
 
-  const full = selected.length >= MAX_FRIENDS;
-  const countOk = selected.length >= MIN_FRIENDS && selected.length <= MAX_FRIENDS;
-  const namesOk = selected.every((id) => names[id].trim().length > 0);
-  const canSave = countOk && namesOk;
+  const full = selected.length >= cast.max;
+  const countOk = selected.length >= cast.min && selected.length <= cast.max;
+  const namesOk = !cast.renamable || selected.every((id) => names[id].trim().length > 0);
+  const titleOk = !titleRequired || title.trim().length > 0;
+  const missingField = config.contextFields.find((f) => f.required && !context[f.id]?.trim());
+  const canSave = countOk && namesOk && titleOk && !missingField;
 
-  function toggle(id: FriendId) {
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < MAX_FRIENDS ? [...s, id] : s));
+  const problem = !titleOk
+    ? `Add your ${config.title.label.toLowerCase()}.`
+    : missingField
+      ? `Add ${missingField.label.toLowerCase()}.`
+      : !countOk
+        ? `Pick ${cast.min} or ${cast.max} ${cast.noun} to continue.`
+        : !namesOk
+          ? `Every one of your ${cast.noun} needs a name.`
+          : "Ready when you are.";
+
+  function toggle(id: string) {
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < cast.max ? [...s, id] : s));
   }
 
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!canSave) return;
-    const friends: GroupFriend[] = selected.map((id) => ({ id, name: names[id].trim() || FRIENDS_BY_ID[id].name }));
-    onSave({ groupName: groupName.trim() || DEFAULT_GROUP_NAME, friends, language });
+    const cleanContext = Object.fromEntries(
+      config.contextFields.map((f) => [f.id, (context[f.id] ?? "").trim()]).filter(([, v]) => v),
+    );
+    onSave({
+      title: title.trim() || config.title.default,
+      participants: selected.map((id) => ({
+        id,
+        name: (cast.renamable ? names[id].trim() : "") || personaById(config, id)!.name,
+      })),
+      language,
+      context: cleanContext,
+    });
   }
 
   return (
-    <form onSubmit={submit} className="animate-fade-up mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+    <form onSubmit={submit} noValidate className="animate-fade-up mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="text-center">
-        <p className="font-mono text-[11px] tracking-[0.2em] text-brand uppercase">The Group Chat</p>
+        <p className="font-mono text-[11px] tracking-[0.2em] text-brand uppercase">{copy.eyebrow}</p>
         <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-          {initial ? "Edit your group" : "Build your group"}
+          {initial ? copy.editHeading : copy.heading}
         </h1>
-        <p className="mx-auto mt-2 max-w-md text-muted">
-          Pick {MIN_FRIENDS} or {MAX_FRIENDS} friends to talk your problem through with. Rename them if you like.
-        </p>
+        <p className="mx-auto mt-2 max-w-md text-muted">{copy.intro}</p>
       </header>
 
-      <div className="mt-8">
-        <label htmlFor="group-name" className="mb-2 block font-display text-lg font-bold">
-          Group name
-        </label>
-        <input
-          id="group-name"
-          value={groupName}
-          maxLength={GROUP_NAME_MAX}
-          onChange={(e) => setGroupName(e.target.value)}
-          placeholder={DEFAULT_GROUP_NAME}
-          className="h-11 w-full rounded-xl border border-white/10 bg-arena-950/80 px-4 text-base text-ink placeholder:text-faint focus:border-brand/50 focus:ring-2 focus:ring-brand/25 focus:outline-none"
+      <div className="mt-8 space-y-6">
+        <TextField
+          id="room-title"
+          label={config.title.label}
+          value={title}
+          onChange={setTitle}
+          placeholder={config.title.placeholder}
+          max={config.title.max}
+          required={titleRequired}
         />
+        {config.contextFields.map((f) => (
+          <TextField
+            key={f.id}
+            id={`context-${f.id}`}
+            label={f.label}
+            value={context[f.id] ?? ""}
+            onChange={(v) => setContext((c) => ({ ...c, [f.id]: v }))}
+            placeholder={f.placeholder}
+            max={f.max}
+            required={f.required}
+            hint={f.hint}
+          />
+        ))}
       </div>
 
       <fieldset className="mt-8">
         <legend className="flex w-full items-baseline justify-between gap-3">
-          <span className="font-display text-lg font-bold">Friends</span>
-          <span aria-live="polite" className={`font-mono text-xs ${countOk ? "text-cyan" : "text-faint"}`}>
-            {selected.length}/{MAX_FRIENDS} picked{full ? " · group is full" : ""}
-          </span>
+          <span className="font-display text-lg font-bold">{cast.heading}</span>
+          {!fixedCast && (
+            <span aria-live="polite" className={`font-mono text-xs ${countOk ? "text-cyan" : "text-faint"}`}>
+              {selected.length}/{cast.max} picked{full ? " · full" : ""}
+            </span>
+          )}
         </legend>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-          {FRIENDS.map((friend) => {
-            const isSelected = selected.includes(friend.id);
+        <ul className={`mt-3 grid gap-3 ${fixedCast ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {config.personas.map((persona) => {
+            const isSelected = selected.includes(persona.id);
             return (
-              <FriendPickerCard
-                key={friend.id}
-                friend={friend}
-                selected={isSelected}
-                disabled={full && !isSelected}
-                name={names[friend.id]}
-                onToggle={() => toggle(friend.id)}
-                onRename={(name) => setNames((n) => ({ ...n, [friend.id]: name }))}
+              <PersonaCard
+                key={persona.id}
+                persona={persona}
+                selection={
+                  fixedCast
+                    ? null
+                    : { selected: isSelected, disabled: full && !isSelected, onToggle: () => toggle(persona.id) }
+                }
+                rename={
+                  cast.renamable && isSelected
+                    ? { name: names[persona.id], onRename: (name) => setNames((n) => ({ ...n, [persona.id]: name })) }
+                    : undefined
+                }
               />
             );
           })}
@@ -105,11 +150,7 @@ export function SetupScreen({
 
       <div className="mt-10 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
         <p className="text-sm text-faint sm:mr-auto" role="status">
-          {!countOk
-            ? `Pick ${MIN_FRIENDS} or ${MAX_FRIENDS} friends to continue.`
-            : !namesOk
-              ? "Every friend needs a name."
-              : "Ready when you are."}
+          {problem}
         </p>
         {onCancel && (
           <Button variant="secondary" size="lg" onClick={onCancel}>
@@ -117,7 +158,7 @@ export function SetupScreen({
           </Button>
         )}
         <Button type="submit" size="lg" disabled={!canSave}>
-          {initial ? "Save group" : "Create group"}
+          {initial ? "Save" : copy.create}
         </Button>
       </div>
     </form>

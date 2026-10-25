@@ -1,15 +1,18 @@
-import { FRIENDS_BY_ID } from "@/config/friends";
-import type { GroupSetup } from "@/lib/chatTypes";
+import { useRoom } from "./RoomContext";
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Message text with @mentions highlighted: friends in their colour, "@you" in the brand colour. */
-export function MessageText({ text, setup }: { text: string; setup: GroupSetup }) {
+/** Message text with @mentions highlighted: personas in their colour, "@you" in the brand colour. */
+export function MessageText({ text }: { text: string }) {
+  const { setup, persona } = useRoom();
+
   // Match chosen names and default names (longest first, so "@Big Bro" wins over "@Big").
   const targets = new Map<string, string | null>(); // lowercase name -> colour (null = the user)
-  for (const f of setup.friends) {
-    targets.set(f.name.toLowerCase(), FRIENDS_BY_ID[f.id].color);
-    targets.set(FRIENDS_BY_ID[f.id].name.toLowerCase(), FRIENDS_BY_ID[f.id].color);
+  for (const p of setup.participants) {
+    const meta = persona(p.id);
+    if (!meta) continue;
+    targets.set(p.name.toLowerCase(), meta.color);
+    targets.set(meta.name.toLowerCase(), meta.color);
   }
   targets.set("you", null);
   const names = [...targets.keys()].sort((a, b) => b.length - a.length).map(escapeRegex);

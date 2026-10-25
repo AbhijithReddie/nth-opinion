@@ -1,71 +1,91 @@
 /**
- * Client for the Group Chat room:
- *   POST /api/rooms/group-chat/message  (SSE stream of typing / message / reaction / ... events)
- *   POST /api/rooms/group-chat/summary  (JSON poll)
+ * Client for the chat rooms:
+ *   POST /api/rooms/{room_id}/message  (SSE stream of typing / message / reaction / ... events)
+ *   POST /api/rooms/{room_id}/summary  (JSON: a poll, investor offers, ...)
  * Errors are thrown as StreamError with a friendly message.
  */
 
-import type { Language } from "@/config/friends";
-import type { ChatItem, GroupFriend, Poll, RoomEvent } from "./chatTypes";
+import type { RoomChatConfig } from "@/config/roomChats";
+import type { ChatItem, Offers, Poll, RoomEvent, RoomSetup, SummaryItem } from "./chatTypes";
 import { API_URL, readDetail, StreamError, streamSse } from "./sseClient";
 
-const ROOM_PATH = "/api/rooms/group-chat";
 /** The backend only looks at the last 40 messages, so there's no point sending more. */
 const HISTORY_LIMIT = 40;
+const SUMMARY_TIMEOUT_MS = 90_000;
 
 const EVENT_TYPES = new Set(["typing", "message", "reaction", "safety", "your_turn", "error"]);
 const FINAL_EVENTS = new Set(["your_turn", "error"]);
 
 const UNREACHABLE = "Can't reach the Huddle server. Make sure the backend is running and try again.";
 
-interface RoomContext {
-  history: ChatItem[];
-  friends: GroupFriend[];
-  language: Language;
+/** The parts of every request that describe the room: history, cast, language and context. */
+function roomBody(config: RoomChatConfig, setup: RoomSetup, items: ChatItem[]) {
+  const context = { ...setup.context };
+  if (config.title.contextKey) context[config.title.contextKey] = setup.title;
+  return {
+    // Recent messages only; summary cards stay in the browser.
+    history: items
+      .filter((item) => item.kind === "message")
+      .slice(-HISTORY_LIMIT)
+      .map((m) => ({ id: m.id, sender: m.sender, text: m.text, reply_to: m.replyTo })),
+    participants: setup.participants,
+    language: setup.language,
+    context,
+  };
 }
 
-/** The request's history: recent messages only (polls stay in the browser). */
-function toHistory(items: ChatItem[]) {
-  return items
-    .filter((item) => item.kind === "message")
-    .slice(-HISTORY_LIMIT)
-    .map((m) => ({ id: m.id, sender: m.sender, text: m.text, reply_to: m.replyTo }));
-}
-
-function httpMessage(status: number, detail: string | undefined, what: "message" | "vote"): string {
+function httpMessage(status: number, detail: string | undefined, what: "message" | "summary"): string {
   if (status === 429) return detail ?? "You're sending messages too fast. Take a breather and try again soon.";
   if (status === 422) return detail ?? "Something about that message didn't look right. Please try again.";
   if (status === 503) return detail ?? "The AI is busy right now, please try again in a minute.";
-  return what === "vote"
-    ? `Couldn't run the vote right now (error ${status}). Please try again.`
-    : `The group chat server ran into a problem (error ${status}). Please try again.`;
+  return what === "summary"
+    ? `Couldn't wrap this up right now (error ${status}). Please try again.`
+    : `The room's server ran into a problem (error ${status}). Please try again.`;
 }
 
-export async function streamGroupMessage(
+export async function streamRoomMessage(
+  config: RoomChatConfig,
+  setup: RoomSetup,
+  history: ChatItem[],
   message: { id: string; text: string },
-  { history, friends, language }: RoomContext,
   onEvent: (event: RoomEvent) => void,
   signal: AbortSignal,
 ): Promise<void> {
   await streamSse<RoomEvent>({
-    path: `${ROOM_PATH}/message`,
-    body: { message: message.text, message_id: message.id, history: toHistory(history), friends, language },
+    path: `/api/rooms/${config.roomId}/message`,
+    body: { ...roomBody(config, setup, history), message: message.text, message_id: message.id },
     eventTypes: EVENT_TYPES,
     finalEvents: FINAL_EVENTS,
     onEvent,
     signal,
     messages: {
       unreachable: UNREACHABLE,
-      slowStart: "The group took too long to answer. Please try again.",
-      lost: "Lost the connection to the group. Please try again.",
-      stalled: "The group went quiet and the connection timed out. Please try again.",
-      closedEarly: "The connection closed before your friends finished replying. Please try again.",
+      slowStart: "The room took too long to answer. Please try again.",
+      lost: "Lost the connection to the room. Please try again.",
+      stalled: "The room went quiet and the connection timed out. Please try again.",
+      closedEarly: "The connection closed before everyone finished replying. Please try again.",
       http: (status, detail) => httpMessage(status, detail, "message"),
     },
   });
 }
 
-export async function fetchGroupPoll({ history, friends, language }: RoomContext, signal: AbortSignal): Promise<Poll> {
+/** Checks the summary JSON has the shape this room's card expects. */
+function isValidSummary(type: SummaryItem["type"], data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  if (type === "poll") {
+    const poll = data as Poll;
+    return typeof poll.question === "string" && Array.isArray(poll.options) && Array.isArray(poll.votes);
+  }
+  const offers = data as Offers;
+  return typeof offers.summary === "string" && Array.isArray(offers.decisions) && Array.isArray(offers.strengths);
+}
+
+export async function fetchRoomSummary(
+  config: RoomChatConfig,
+  setup: RoomSetup,
+  items: ChatItem[],
+  signal: AbortSignal,
+): Promise<SummaryItem["data"]> {
   // Abort on the caller's signal, or after 90 seconds so the button never spins forever.
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -74,30 +94,31 @@ export async function fetchGroupPoll({ history, friends, language }: RoomContext
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 90_000);
+  }, SUMMARY_TIMEOUT_MS);
+  const tooSlow = "That took too long. Please try again.";
 
   try {
     let response: Response;
     try {
-      response = await fetch(`${API_URL}${ROOM_PATH}/summary`, {
+      response = await fetch(`${API_URL}/api/rooms/${config.roomId}/summary`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ history: toHistory(history), friends, language }),
+        body: JSON.stringify(roomBody(config, setup, items)),
         signal: controller.signal,
       });
     } catch (err) {
       if (signal.aborted) throw err;
-      throw new StreamError(timedOut ? "The vote took too long. Please try again." : UNREACHABLE);
+      throw new StreamError(timedOut ? tooSlow : UNREACHABLE);
     }
-    if (!response.ok) throw new StreamError(httpMessage(response.status, await readDetail(response), "vote"));
+    if (!response.ok) throw new StreamError(httpMessage(response.status, await readDetail(response), "summary"));
 
     try {
-      const poll = (await response.json()) as Poll;
-      if (!poll?.question || !Array.isArray(poll.options) || !Array.isArray(poll.votes)) throw new Error("bad poll");
-      return poll;
+      const data = await response.json();
+      if (!isValidSummary(config.summary.type, data)) throw new Error("unexpected summary shape");
+      return data;
     } catch (err) {
       if (signal.aborted) throw err;
-      throw new StreamError(timedOut ? "The vote took too long. Please try again." : "The vote came back garbled. Please try again.");
+      throw new StreamError(timedOut ? tooSlow : "The result came back garbled. Please try again.");
     }
   } finally {
     clearTimeout(timer);

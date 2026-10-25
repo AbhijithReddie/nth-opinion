@@ -1,4 +1,4 @@
-import { LANGUAGES, type Language } from "@/config/friends";
+import { LANGUAGES, type Language } from "@/config/roomChats";
 
 /** English / Hinglish / Tenglish as a segmented radio group. */
 export function LanguagePicker({ value, onChange }: { value: Language; onChange: (lang: Language) => void }) {

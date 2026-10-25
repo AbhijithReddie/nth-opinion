@@ -1,14 +1,13 @@
-import { FRIENDS_BY_ID } from "@/config/friends";
-import type { ChatMessage, GroupSetup } from "@/lib/chatTypes";
+import type { ChatMessage } from "@/lib/chatTypes";
 import { Avatar } from "./Avatar";
-import { formatTime, senderName } from "./chatNames";
+import { formatTime } from "./chatNames";
 import { MessageText } from "./MessageText";
 import { Reactions } from "./Reactions";
 import { ReplyQuote } from "./ReplyQuote";
+import { useRoom } from "./RoomContext";
 
 interface MessageBubbleProps {
   message: ChatMessage;
-  setup: GroupSetup;
   /** The message this one replies to, if any. */
   original: ChatMessage | undefined;
   /** True when the previous message has the same sender: hide the repeated name and avatar. */
@@ -17,11 +16,12 @@ interface MessageBubbleProps {
   onJump: (id: string) => void;
 }
 
-/** One chat message: friends on the left with avatar and coloured name, the user on the right. */
-export function MessageBubble({ message, setup, original, grouped, highlighted, onJump }: MessageBubbleProps) {
+/** One chat message: personas on the left with avatar and coloured name, the user on the right. */
+export function MessageBubble({ message, original, grouped, highlighted, onJump }: MessageBubbleProps) {
+  const { persona, nameOf } = useRoom();
   const mine = message.sender === "user";
-  const friend = mine ? null : FRIENDS_BY_ID[message.sender as keyof typeof FRIENDS_BY_ID];
-  const name = senderName(setup, message.sender);
+  const author = mine ? undefined : persona(message.sender);
+  const name = nameOf(message.sender);
 
   return (
     <li
@@ -29,7 +29,7 @@ export function MessageBubble({ message, setup, original, grouped, highlighted, 
       className={`animate-message-in scroll-mt-24 rounded-2xl ${highlighted ? "animate-flash" : ""} ${grouped ? "mt-1" : "mt-3"}`}
     >
       <div className={`flex items-end gap-2 ${mine ? "justify-end" : ""}`}>
-        {friend && (grouped ? <span className="size-8 shrink-0" /> : <Avatar id={friend.id} />)}
+        {!mine && (grouped || !author ? <span className="size-8 shrink-0" /> : <Avatar persona={author} />)}
 
         <div className={`flex max-w-[82%] flex-col sm:max-w-[70%] ${mine ? "items-end" : "items-start"}`}>
           <div
@@ -37,15 +37,15 @@ export function MessageBubble({ message, setup, original, grouped, highlighted, 
               mine ? "rounded-br-md bg-brand-strong text-white" : "rounded-bl-md border border-white/[0.06] bg-arena-800 text-ink"
             }`}
           >
-            {friend && !grouped && (
-              <p className="mb-0.5 text-[13px] font-semibold" style={{ color: friend.color }}>
+            {!mine && !grouped && (
+              <p className="mb-0.5 text-[13px] font-semibold" style={{ color: author?.color }}>
                 {name}
               </p>
             )}
-            {message.replyTo && <ReplyQuote original={original} setup={setup} onJump={onJump} />}
+            {message.replyTo && <ReplyQuote original={original} onJump={onJump} />}
             <p className="break-words whitespace-pre-wrap">
               <span className="sr-only">{name}: </span>
-              <MessageText text={message.text} setup={setup} />
+              <MessageText text={message.text} />
             </p>
             <time
               dateTime={new Date(message.ts).toISOString()}
@@ -54,7 +54,7 @@ export function MessageBubble({ message, setup, original, grouped, highlighted, 
               {formatTime(message.ts)}
             </time>
           </div>
-          <Reactions reactions={message.reactions} setup={setup} alignRight={mine} />
+          <Reactions reactions={message.reactions} alignRight={mine} />
         </div>
       </div>
     </li>

@@ -1,21 +1,23 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { MESSAGE_MAX } from "@/hooks/useGroupChat";
+import { MESSAGE_MAX } from "@/config/roomChats";
 import { PollIcon, SendIcon } from "../icons";
 import { TypingIndicator } from "../TypingIndicator";
 
 interface ComposerProps {
   onSend: (text: string) => boolean;
-  onAskPoll: () => void;
-  canPoll: boolean;
-  polling: boolean;
-  /** Friends are still replying; sending now interrupts them. */
+  onSummary: () => void;
+  canSummarize: boolean;
+  summarizing: boolean;
+  /** The room is still replying; sending now interrupts it. */
   replying: boolean;
+  /** Wording from the room config. */
+  labels: { summary: string; summaryLoading: string; placeholder: string; note: string };
 }
 
-/** Message input (Enter sends, Shift+Enter for a new line), send button and "Ask the group to vote". */
-export function Composer({ onSend, onAskPoll, canPoll, polling, replying }: ComposerProps) {
+/** Message input (Enter sends, Shift+Enter for a new line), send button and the room's summary button. */
+export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels }: ComposerProps) {
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nearLimit = text.length > MESSAGE_MAX - 100;
@@ -44,18 +46,18 @@ export function Composer({ onSend, onAskPoll, canPoll, polling, replying }: Comp
       <div className="mb-2 flex items-center justify-between gap-2">
         <button
           type="button"
-          onClick={onAskPoll}
-          disabled={!canPoll || polling}
+          onClick={onSummary}
+          disabled={!canSummarize || summarizing}
           className="inline-flex h-8 items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 px-3 text-xs font-semibold text-brand transition hover:bg-brand/20 focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-          title={canPoll ? undefined : "Send a message first"}
+          title={canSummarize ? undefined : "Send a message first"}
         >
-          {polling ? (
+          {summarizing ? (
             <>
-              Counting votes <TypingIndicator label="Counting votes" />
+              {labels.summaryLoading} <TypingIndicator label={labels.summaryLoading} />
             </>
           ) : (
             <>
-              <PollIcon className="size-3.5" /> Ask the group to vote
+              <PollIcon className="size-3.5" /> {labels.summary}
             </>
           )}
         </button>
@@ -64,7 +66,7 @@ export function Composer({ onSend, onAskPoll, canPoll, polling, replying }: Comp
 
       <form onSubmit={submit} className="flex items-end gap-2">
         <label htmlFor="chat-input" className="sr-only">
-          Message the group
+          {labels.placeholder}
         </label>
         <div className="relative flex-1">
           <textarea
@@ -73,7 +75,7 @@ export function Composer({ onSend, onAskPoll, canPoll, polling, replying }: Comp
             rows={1}
             value={text}
             maxLength={MESSAGE_MAX}
-            placeholder="Message the group..."
+            placeholder={labels.placeholder}
             onChange={(e) => {
               setText(e.target.value);
               autosize();
@@ -99,7 +101,7 @@ export function Composer({ onSend, onAskPoll, canPoll, polling, replying }: Comp
           <SendIcon className="size-5" />
         </button>
       </form>
-      <p className="mt-1.5 text-center text-[11px] text-faint">AI friends, real perspectives. Not professional advice.</p>
+      <p className="mt-1.5 text-center text-[11px] text-faint">{labels.note}</p>
     </div>
   );
 }

@@ -1,22 +1,23 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { RoomChatId } from "@/config/roomChats";
 import { TypingIndicator } from "../TypingIndicator";
 
 /**
- * Loads the Group Chat in the browser only. The chat restores itself from
+ * Loads a chat room in the browser only. The room restores itself from
  * localStorage, which doesn't exist on the server, so rendering it there would
  * flash the wrong screen and cause hydration mismatches.
  */
-const GroupChat = dynamic(() => import("./GroupChat"), {
+const RoomChat = dynamic(() => import("./RoomChat"), {
   ssr: false,
   loading: () => (
     <main id="main" className="grid flex-1 place-items-center py-24 text-muted">
-      <TypingIndicator label="Loading the group chat" />
+      <TypingIndicator label="Loading the room" />
     </main>
   ),
 });
 
-export function GroupChatLoader() {
-  return <GroupChat />;
+export function RoomChatLoader({ roomId }: { roomId: RoomChatId }) {
+  return <RoomChat roomId={roomId} />;
 }

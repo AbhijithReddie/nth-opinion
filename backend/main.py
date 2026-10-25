@@ -105,6 +105,8 @@ class RoomContext(BaseModel):
     history: list[HistoryMessage] = Field(default_factory=list, max_length=500)
     participants: list[Participant] = Field(validation_alias=AliasChoices("friends", "participants"))
     language: Literal["english", "hinglish", "tenglish"] = "english"
+    # Room-specific details from the setup screen, e.g. {"startup": "...", "ask": "..."} in Shark Tank.
+    context: dict[Id, Annotated[str, StringConstraints(max_length=2000)]] = Field(default_factory=dict, max_length=10)
 
 
 class RoomMessageRequest(RoomContext):
@@ -125,6 +127,8 @@ def _room_validation_message(fields: set[str]) -> str:
         return "Pick 3 or 4 friends for the group."
     if "language" in fields:
         return "Language must be english, hinglish or tenglish."
+    if "context" in fields:
+        return "Some of the room details couldn't be read. Try editing the room setup."
     return 'Invalid request. Send JSON like {"message": "...", "history": [], "friends": [...], "language": "english"}.'
 
 
@@ -179,7 +183,7 @@ room_message_limiter = RateLimiter(
     40, "Your friends need a breather! You've sent 40 messages this hour. Try again a little later."
 )
 summary_limiter = RateLimiter(
-    10, "That's 10 polls this hour, the group is all voted out! Try again a little later."
+    10, "That's 10 votes and offer rounds this hour. Give the room a break and try again a little later."
 )
 
 
@@ -296,6 +300,8 @@ def _room_or_error(room_id: str, body: RoomContext):
     problem = room.validate_participants([p.model_dump() for p in body.participants])
     if problem is None and body.language not in room.languages:
         problem = f"This room supports: {', '.join(room.languages)}."
+    if problem is None:
+        problem = room.validate_context(body.context)
     if problem:
         return None, JSONResponse(status_code=422, content={"detail": problem})
     return room, None
@@ -319,6 +325,7 @@ async def _room_events(room, body: RoomMessageRequest, request: Request):
             participants=[p.model_dump() for p in body.participants],
             language=body.language,
             mode=body.mode,
+            context=body.context,
         ):
             if await request.is_disconnected():
                 logger.info("Client left room %s; stopped generating", room.id)
@@ -380,6 +387,7 @@ async def room_summary(room_id: str, body: RoomContext, request: Request):
             history=[m.model_dump() for m in body.history],
             participants=[p.model_dump() for p in body.participants],
             language=body.language,
+            context=body.context,
         )
     except SummaryError as exc:
         return JSONResponse(status_code=422, content={"detail": str(exc)})

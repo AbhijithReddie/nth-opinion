@@ -63,13 +63,13 @@ export const ROOMS: RoomMeta[] = [
     title: "Shark Tank Pitch Room",
     icon: "🦈",
     description: "Pitch your startup idea to 3 investors who grill you and make offers.",
-    status: "soon",
+    status: "live",
     href: "/rooms/shark-tank",
     accent: "#38BDF8",
     cast: [
-      { name: "The Numbers Shark", role: "Wants your unit economics", emoji: "📊" },
-      { name: "The Visionary", role: "Asks how big this can get", emoji: "🚀" },
-      { name: "The Skeptic", role: "Finds every hole", emoji: "🤨" },
+      { name: "Kavya", role: "The Numbers Shark", emoji: "📊" },
+      { name: "Aditya", role: "The Visionary", emoji: "🚀" },
+      { name: "Rustom", role: "The Skeptic", emoji: "🤨" },
     ],
   },
   {
