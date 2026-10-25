@@ -7,7 +7,7 @@
  * + a page that renders <RoomChatLoader roomId="..." />.
  */
 
-import { GROUP_CHAT_FRIENDS, ROAST_PANEL, SHARKS, type Persona } from "./personas";
+import { GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, type Persona } from "./personas";
 
 export const LANGUAGES = [
   { id: "english", label: "English", hint: "Casual, with Indian slang" },
@@ -32,7 +32,7 @@ export interface ContextFieldConfig {
   multiline?: boolean;
 }
 
-export type SummaryType = "poll" | "offers" | "scorecard";
+export type SummaryType = "poll" | "offers" | "scorecard" | "interview";
 
 /** A phase of a room with modes (see backend Mode). The first one is where the room starts. */
 export interface RoomModeConfig {
@@ -197,6 +197,44 @@ export const ROOM_CHATS = {
       { id: "roast", label: "🔥 Roast", divider: "🔥 The roast is on", switchLabel: "🔥 Roast me again" },
       { id: "toast", label: "🥂 Toast", divider: "🥂 Toast time: real feedback", switchLabel: "🥂 Switch to real feedback" },
     ],
+  },
+  "interview-panel": {
+    roomId: "interview-panel",
+    storageKey: "huddle.room.interview-panel.v1",
+    personas: INTERVIEWERS,
+    cast: { min: 3, max: 3, defaults: ["pooja", "karthik", "devraj"], renamable: false, heading: "Your panel", noun: "interviewers" },
+    title: { label: "Role you're interviewing for", default: "", placeholder: "e.g. SDE-1 (Backend)", max: 80, contextKey: "role" },
+    contextFields: [
+      {
+        id: "resume",
+        label: "Paste your resume",
+        placeholder: "Paste your resume as plain text. The panel will ask about what's on it...",
+        max: 6000,
+        required: true,
+        multiline: true,
+        hint: "Remove your phone number, email and address before pasting.",
+      },
+      {
+        id: "company",
+        label: "Company (optional)",
+        placeholder: "e.g. a fintech startup, or a product company",
+        max: 80,
+        required: false,
+      },
+    ],
+    copy: {
+      eyebrow: "Interview Panel",
+      heading: "Practise your interview",
+      editHeading: "Edit interview details",
+      intro: "Three interviewers question you about your resume, one question at a time, then decide: hire or no hire?",
+      create: "Start the interview",
+      editMenu: "Edit interview details",
+      emptyTitle: "The panel is ready: {title}",
+      emptyIntro: "{names} have read your resume. Say hello to begin:",
+      starters: ["Hi, I'm ready to start.", "Hello everyone, thanks for having me!"],
+    },
+    summary: { type: "interview", button: "End interview & get feedback", loading: "The panel is deciding" },
+    composer: { placeholder: "Answer the panel...", note: "AI interviewers for practice. Not a real hiring decision." },
   },
 } satisfies Record<string, RoomChatConfig>;
 

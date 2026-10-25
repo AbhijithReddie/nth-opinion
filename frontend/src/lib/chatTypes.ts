@@ -74,11 +74,22 @@ export interface Scorecard {
   best_toast: string;
 }
 
+/** Interview Panel summary: "End interview & get feedback". */
+export interface InterviewResult {
+  decision: "offer" | "no_offer";
+  summary: string;
+  verdicts: { friend_id: string; recommendation: "strong_hire" | "hire" | "no_hire" | "strong_no_hire"; reason: string }[];
+  competencies: { name: string; score: number; note: string }[];
+  strengths: string[];
+  improvements: string[];
+}
+
 /** A room's final output, shown as a card in the chat. */
 export type SummaryItem = { kind: "summary"; id: string; ts: number } & (
   | { type: "poll"; data: Poll }
   | { type: "offers"; data: Offers }
   | { type: "scorecard"; data: Scorecard }
+  | { type: "interview"; data: InterviewResult }
 );
 
 /** A divider in the chat marking a switch between room modes (e.g. Roast -> Toast). */

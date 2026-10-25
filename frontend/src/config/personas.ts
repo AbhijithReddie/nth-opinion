@@ -33,3 +33,9 @@ export const ROAST_PANEL: Persona[] = [
   { id: "nandini", name: "Nandini", emoji: "🧭", color: "#34D399", tagline: "The Mentor: turns jokes into fixes" },
   { id: "sameer", name: "Sameer", emoji: "📎", color: "#F6C453", tagline: "The Recruiter: reads it like a hiring manager" },
 ];
+
+export const INTERVIEWERS: Persona[] = [
+  { id: "pooja", name: "Pooja", emoji: "🤝", color: "#EC4899", tagline: "HR: motivation, culture fit and communication" },
+  { id: "karthik", name: "Karthik", emoji: "💻", color: "#38BDF8", tagline: "Tech lead: goes deep on your projects" },
+  { id: "devraj", name: "Devraj", emoji: "🗂️", color: "#F6C453", tagline: "Hiring manager: skeptical, wants proof of impact" },
+];

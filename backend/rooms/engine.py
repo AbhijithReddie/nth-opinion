@@ -125,6 +125,9 @@ class RoomConfig:
     max_in_a_row: int = 2  # the same persona can't send more than this many messages in a row
     max_words: int = 40  # target length of one message
     crisis_messages: tuple[int, int] = (2, 3)  # min/max supportive messages after a crisis message
+    # On a brand-new topic, make sure every persona speaks once before the turn ends (off for e.g. interviews,
+    # where the panel should ask one question at a time).
+    everyone_speaks_on_new_topic: bool = True
     history_limit: int = 40  # messages of history the engine looks at
     user_label: str = "User"  # how the user appears in transcripts
 
@@ -375,7 +378,7 @@ async def safety_check_node(state: RoomState) -> dict:
         get_stream_writer()(("safety", {"helpline_text": HELPLINE_TEXT}))
     # The very first user message is always a new topic: everyone should get a say.
     first_message = not any(m["sender"] == "user" for m in earlier)
-    return {"crisis": crisis, "cover_everyone": first_message}
+    return {"crisis": crisis, "cover_everyone": first_message and room.everyone_speaks_on_new_topic}
 
 
 def _director_prompt(state: RoomState, room: RoomConfig) -> list:
@@ -581,7 +584,7 @@ async def director_node(state: RoomState) -> dict:
     )
 
     update: dict[str, Any] = {"decision": decision, "steps": step}
-    if raw.topic_is_new and step == 1 and not state.get("cover_everyone"):
+    if raw.topic_is_new and step == 1 and room.everyone_speaks_on_new_topic and not state.get("cover_everyone"):
         update["cover_everyone"] = True
     if room.modes and raw.next_mode and raw.next_mode != state.get("mode"):
         if any(m.id == raw.next_mode for m in room.modes):

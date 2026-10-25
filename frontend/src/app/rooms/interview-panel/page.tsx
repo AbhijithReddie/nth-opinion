@@ -1,7 +1,16 @@
-import { ComingSoon, comingSoonMetadata } from "@/components/rooms/ComingSoon";
+import type { Metadata } from "next";
+import { RoomChatLoader } from "@/components/chat/RoomChatLoader";
+import { getRoom } from "@/config/rooms";
 
-export const metadata = comingSoonMetadata("interview-panel");
+const room = getRoom("interview-panel");
 
+export const metadata: Metadata = {
+  title: room.title,
+  description: `${room.description} Practise answering one question at a time, then see whether the panel would hire you and why.`,
+  openGraph: { title: `${room.title} · Huddle`, description: room.description, url: room.href },
+};
+
+/** /rooms/interview-panel. No footer: the room fills the screen like a messaging app. */
 export default function InterviewPanelPage() {
-  return <ComingSoon roomId="interview-panel" />;
+  return <RoomChatLoader roomId="interview-panel" />;
 }

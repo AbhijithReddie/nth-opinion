@@ -13,7 +13,8 @@ going round-robin.
 | **The Group Chat**: share a problem with a WhatsApp-style group of AI friends | Live |
 | **Shark Tank Pitch Room**: pitch your startup to 3 investors who grill you, then make offers | Live |
 | **Roast & Toast**: your resume or project gets roasted, then gets real feedback and a scorecard | Live |
-| Interview Panel, Future You, Study Group | Coming soon |
+| **Interview Panel**: HR, a tech lead and a skeptical manager interview you from your resume | Live |
+| Future You, Study Group | Coming soon |
 
 The backend is FastAPI + LangGraph (Gemini models, optional LangSmith tracing),
 streaming over Server-Sent Events. The frontend is Next.js + Tailwind.
@@ -32,6 +33,7 @@ backend/
     group_chat.py     The Group Chat room: personas, languages, poll
     shark_tank.py     The Shark Tank room: investors, pitch details, offers
     roast_and_toast.py  Roast & Toast: panel, roast/toast modes, pasted material, scorecard
+    interview_panel.py  Interview Panel: interviewers, role + resume, hire/no-hire result
   run_cli.py          Debate Arena in the terminal
   chat_cli.py         Group Chat in the terminal
   test_stream.py      smoke test for the debate SSE stream
@@ -131,7 +133,8 @@ if the styles look stale.
 | `/rooms/group-chat` | The Group Chat |
 | `/rooms/shark-tank` | Shark Tank Pitch Room |
 | `/rooms/roast-and-toast` | Roast & Toast |
-| `/rooms/interview-panel`, `/rooms/future-you`, `/rooms/study-group` | Coming soon |
+| `/rooms/interview-panel` | Interview Panel |
+| `/rooms/future-you`, `/rooms/study-group` | Coming soon |
 | `/about` | About, agent diagram, disclaimer |
 
 ### Frontend layout
@@ -256,8 +259,11 @@ For example, a Study Group room:
 That's it. `GET /api/rooms` lists it, and `/api/rooms/study-group/message`
 and `/summary` work right away with the same safety layer, director loop,
 streaming, validation and rate limits. Tunables such as `max_messages`,
-`max_reactions`, `max_in_a_row`, `max_words` and `reaction_emojis` have
-defaults on `RoomConfig` and can be overridden per room.
+`max_reactions` (0 turns reactions off), `max_in_a_row`, `max_words`,
+`reaction_emojis` and `everyone_speaks_on_new_topic` have defaults on
+`RoomConfig` and can be overridden per room. `everyone_speaks_on_new_topic` is
+on by default, so every persona speaks on a new topic; the Interview Panel
+turns it off so it asks one question at a time.
 
 If a room needs details from the user (a startup's name and ask, a resume, a
 study topic), declare them as `context_fields`:
@@ -398,6 +404,24 @@ without a valid amount and equity is turned into `"out"`:
   ]
 }
 ```
+
+The Interview Panel requires the context fields `role` and `resume`, and
+`company` is optional. Its summary is the panel's decision: `offer` when a
+majority recommend hiring.
+
+```json
+{
+  "decision": "offer",
+  "summary": "Clear communicator; technical depth needs work.",
+  "verdicts": [ { "friend_id": "karthik", "recommendation": "hire", "reason": "Reasoned well about the Redis restart." } ],
+  "competencies": [ { "name": "Communication", "score": 4, "note": "Structured answers." } ],
+  "strengths": ["Structured self-introduction"],
+  "improvements": ["Revise Redis persistence (RDB vs AOF)"]
+}
+```
+
+`recommendation` is one of `strong_hire`, `hire`, `no_hire` or
+`strong_no_hire`, and competency scores are 1-5.
 
 Roast & Toast returns a scorecard (scores are clamped to 1-10):
 

@@ -77,13 +77,13 @@ export const ROOMS: RoomMeta[] = [
     title: "Interview Panel",
     icon: "🎤",
     description: "HR, a tech lead and a skeptical manager interview you from your resume.",
-    status: "soon",
+    status: "live",
     href: "/rooms/interview-panel",
     accent: "#F6C453",
     cast: [
-      { name: "HR", role: "Culture fit and motivation", emoji: "🤝" },
-      { name: "Tech Lead", role: "Deep technical questions", emoji: "💻" },
-      { name: "The Manager", role: "Skeptical about everything", emoji: "🧐" },
+      { name: "Pooja", role: "HR", emoji: "🤝" },
+      { name: "Karthik", role: "Tech lead", emoji: "💻" },
+      { name: "Devraj", role: "Hiring manager", emoji: "🗂️" },
     ],
   },
   {
