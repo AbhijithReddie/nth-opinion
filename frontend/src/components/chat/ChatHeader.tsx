@@ -4,8 +4,20 @@ import { typingLabel } from "./chatNames";
 import { useRoom } from "./RoomContext";
 
 /** Room title, stacked avatars, and a live status line ("Rohit is typing..." or the member list). */
-export function ChatHeader({ typing, onEdit, onClearChat }: { typing: string[]; onEdit: () => void; onClearChat: () => void }) {
+export function ChatHeader({
+  typing,
+  mode,
+  onEdit,
+  onClearChat,
+}: {
+  typing: string[];
+  /** Current mode id, for rooms with modes. */
+  mode: string | null;
+  onEdit: () => void;
+  onClearChat: () => void;
+}) {
   const { config, setup, persona, nameOf } = useRoom();
+  const modeLabel = config.modes?.find((m) => m.id === mode)?.label;
   const typingNames = typing.map(nameOf);
   const status = typingNames.length ? typingLabel(typingNames) : `${setup.participants.map((p) => p.name).join(", ")}, You`;
 
@@ -23,6 +35,11 @@ export function ChatHeader({ typing, onEdit, onClearChat }: { typing: string[]; 
           {status}
         </p>
       </div>
+      {modeLabel && (
+        <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold" aria-label={`Mode: ${modeLabel}`}>
+          {modeLabel}
+        </span>
+      )}
       <ChatMenu editLabel={config.copy.editMenu} onEdit={onEdit} onClearChat={onClearChat} />
     </header>
   );

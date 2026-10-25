@@ -14,10 +14,12 @@ interface ComposerProps {
   replying: boolean;
   /** Wording from the room config. */
   labels: { summary: string; summaryLoading: string; placeholder: string; note: string };
+  /** Rooms with modes: a button that switches to the other mode. */
+  modeSwitch?: { label: string; onClick: () => void };
 }
 
 /** Message input (Enter sends, Shift+Enter for a new line), send button and the room's summary button. */
-export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels }: ComposerProps) {
+export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels, modeSwitch }: ComposerProps) {
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nearLimit = text.length > MESSAGE_MAX - 100;
@@ -43,7 +45,16 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
 
   return (
     <div className="border-t border-white/[0.06] bg-arena-900/90 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        {modeSwitch && (
+          <button
+            type="button"
+            onClick={modeSwitch.onClick}
+            className="inline-flex h-8 items-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-ink/85 transition hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+          >
+            {modeSwitch.label}
+          </button>
+        )}
         <button
           type="button"
           onClick={onSummary}
@@ -61,7 +72,7 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
             </>
           )}
         </button>
-        {replying && <span className="text-[11px] text-faint">You can reply any time</span>}
+        {replying && <span className="ml-auto text-[11px] text-faint">You can reply any time</span>}
       </div>
 
       <form onSubmit={submit} className="flex items-end gap-2">

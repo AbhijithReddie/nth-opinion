@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ChatItem, ChatMessage } from "@/lib/chatTypes";
 import { fillTemplate } from "./chatNames";
 import { MessageBubble } from "./MessageBubble";
+import { ModeDivider } from "./ModeDivider";
 import { useRoom } from "./RoomContext";
 import { SummaryCard } from "./SummaryCard";
 import { TypingBubble } from "./TypingBubble";
@@ -56,6 +57,7 @@ export function MessageList({ items, typing }: { items: ChatItem[]; typing: stri
         <ol aria-label="Messages" aria-live="polite" aria-relevant="additions" className="flex flex-col">
           {items.map((item, i) => {
             if (item.kind === "summary") return <SummaryCard key={item.id} item={item} />;
+            if (item.kind === "mode") return <ModeDivider key={item.id} mode={item.mode} />;
             const prev = items[i - 1];
             const grouped = prev?.kind === "message" && prev.sender === item.sender && !item.replyTo;
             return (

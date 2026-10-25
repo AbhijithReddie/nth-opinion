@@ -7,7 +7,7 @@
  * + a page that renders <RoomChatLoader roomId="..." />.
  */
 
-import { GROUP_CHAT_FRIENDS, SHARKS, type Persona } from "./personas";
+import { GROUP_CHAT_FRIENDS, ROAST_PANEL, SHARKS, type Persona } from "./personas";
 
 export const LANGUAGES = [
   { id: "english", label: "English", hint: "Casual, with Indian slang" },
@@ -28,9 +28,22 @@ export interface ContextFieldConfig {
   max: number;
   required: boolean;
   hint?: string;
+  /** A large textarea (e.g. a pasted resume) instead of a one-line input. */
+  multiline?: boolean;
 }
 
-export type SummaryType = "poll" | "offers";
+export type SummaryType = "poll" | "offers" | "scorecard";
+
+/** A phase of a room with modes (see backend Mode). The first one is where the room starts. */
+export interface RoomModeConfig {
+  id: string;
+  /** Short label for the header chip, e.g. "🔥 Roast". */
+  label: string;
+  /** Divider text shown in the chat when the room switches into this mode. */
+  divider: string;
+  /** Button text that switches into this mode. */
+  switchLabel: string;
+}
 
 export interface RoomChatConfig {
   roomId: string;
@@ -73,6 +86,8 @@ export interface RoomChatConfig {
   };
   summary: { type: SummaryType; button: string; loading: string };
   composer: { placeholder: string; note: string };
+  /** Optional phases; the user and the director can switch between them. */
+  modes?: RoomModeConfig[];
 }
 
 export const ROOM_CHATS = {
@@ -140,6 +155,48 @@ export const ROOM_CHATS = {
     },
     summary: { type: "offers", button: "Ask for offers", loading: "Investors are deciding" },
     composer: { placeholder: "Pitch or answer the investors...", note: "AI investors, real questions. Not financial advice." },
+  },
+  "roast-and-toast": {
+    roomId: "roast-and-toast",
+    storageKey: "huddle.room.roast-and-toast.v1",
+    personas: ROAST_PANEL,
+    cast: { min: 3, max: 3, defaults: ["kabir", "nandini", "sameer"], renamable: false, heading: "Your panel", noun: "panelists" },
+    title: { label: "What are we reviewing?", default: "", placeholder: "e.g. My SDE resume", max: 60, contextKey: "title" },
+    contextFields: [
+      {
+        id: "material",
+        label: "Paste it here",
+        placeholder: "Paste your resume, project README, portfolio text or pitch...",
+        max: 6000,
+        required: true,
+        multiline: true,
+        hint: "Plain text works best. Remove your phone number, email and address before pasting.",
+      },
+      {
+        id: "goal",
+        label: "Your goal (optional)",
+        placeholder: "e.g. SDE-1 roles at product companies",
+        max: 120,
+        required: false,
+      },
+    ],
+    copy: {
+      eyebrow: "Roast & Toast",
+      heading: "Get roasted, then get better",
+      editHeading: "Edit what's being reviewed",
+      intro: "Three panelists roast your resume or project, then switch to honest, specific feedback.",
+      create: "Start the roast",
+      editMenu: "Edit material",
+      emptyTitle: "The panel has read {title}",
+      emptyIntro: "Say the word and {names} will begin. Try:",
+      starters: ["Roast me. Don't hold back.", "Be gentle, it's my first resume 🥲", "Skip the jokes, what would get me rejected?"],
+    },
+    summary: { type: "scorecard", button: "Get my scorecard", loading: "Scoring" },
+    composer: { placeholder: "Reply to the panel...", note: "AI panel, real feedback. Not professional career advice." },
+    modes: [
+      { id: "roast", label: "🔥 Roast", divider: "🔥 The roast is on", switchLabel: "🔥 Roast me again" },
+      { id: "toast", label: "🥂 Toast", divider: "🥂 Toast time: real feedback", switchLabel: "🥂 Switch to real feedback" },
+    ],
   },
 } satisfies Record<string, RoomChatConfig>;
 

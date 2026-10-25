@@ -64,13 +64,32 @@ export interface Offers {
   decisions: InvestorDecision[];
 }
 
+/** Roast & Toast summary: "Get my scorecard". */
+export interface Scorecard {
+  overall: number;
+  verdict: string;
+  scores: { category: string; score: number; note: string }[];
+  fixes: { title: string; detail: string; friend_id: string | null }[];
+  best_roast: string;
+  best_toast: string;
+}
+
 /** A room's final output, shown as a card in the chat. */
 export type SummaryItem = { kind: "summary"; id: string; ts: number } & (
   | { type: "poll"; data: Poll }
   | { type: "offers"; data: Offers }
+  | { type: "scorecard"; data: Scorecard }
 );
 
-export type ChatItem = ChatMessage | SummaryItem;
+/** A divider in the chat marking a switch between room modes (e.g. Roast -> Toast). */
+export interface ModeItem {
+  kind: "mode";
+  id: string;
+  ts: number;
+  mode: string;
+}
+
+export type ChatItem = ChatMessage | SummaryItem | ModeItem;
 
 /** One SSE event from the room, already JSON-decoded. */
 export type RoomEvent =
@@ -78,6 +97,7 @@ export type RoomEvent =
   | { type: "message"; id: string; friend_id: string; text: string; reply_to: string | null; mentions: string[] }
   | { type: "reaction"; friend_id: string; message_id: string; emoji: string }
   | { type: "safety"; helpline_text: string }
+  | { type: "mode"; mode: string }
   | { type: "your_turn" }
   | { type: "error"; message: string };
 

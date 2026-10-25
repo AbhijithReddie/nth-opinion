@@ -6,14 +6,14 @@
  */
 
 import type { RoomChatConfig } from "@/config/roomChats";
-import type { ChatItem, Offers, Poll, RoomEvent, RoomSetup, SummaryItem } from "./chatTypes";
+import type { ChatItem, Offers, Poll, RoomEvent, RoomSetup, Scorecard, SummaryItem } from "./chatTypes";
 import { API_URL, readDetail, StreamError, streamSse } from "./sseClient";
 
 /** The backend only looks at the last 40 messages, so there's no point sending more. */
 const HISTORY_LIMIT = 40;
 const SUMMARY_TIMEOUT_MS = 90_000;
 
-const EVENT_TYPES = new Set(["typing", "message", "reaction", "safety", "your_turn", "error"]);
+const EVENT_TYPES = new Set(["typing", "message", "reaction", "safety", "mode", "your_turn", "error"]);
 const FINAL_EVENTS = new Set(["your_turn", "error"]);
 
 const UNREACHABLE = "Can't reach the Huddle server. Make sure the backend is running and try again.";
@@ -48,12 +48,14 @@ export async function streamRoomMessage(
   setup: RoomSetup,
   history: ChatItem[],
   message: { id: string; text: string },
+  /** The room's current mode, for rooms with modes (null otherwise). */
+  mode: string | null,
   onEvent: (event: RoomEvent) => void,
   signal: AbortSignal,
 ): Promise<void> {
   await streamSse<RoomEvent>({
     path: `/api/rooms/${config.roomId}/message`,
-    body: { ...roomBody(config, setup, history), message: message.text, message_id: message.id },
+    body: { ...roomBody(config, setup, history), message: message.text, message_id: message.id, mode },
     eventTypes: EVENT_TYPES,
     finalEvents: FINAL_EVENTS,
     onEvent,
@@ -75,6 +77,10 @@ function isValidSummary(type: SummaryItem["type"], data: unknown): boolean {
   if (type === "poll") {
     const poll = data as Poll;
     return typeof poll.question === "string" && Array.isArray(poll.options) && Array.isArray(poll.votes);
+  }
+  if (type === "scorecard") {
+    const card = data as Scorecard;
+    return typeof card.overall === "number" && Array.isArray(card.scores) && Array.isArray(card.fixes);
   }
   const offers = data as Offers;
   return typeof offers.summary === "string" && Array.isArray(offers.decisions) && Array.isArray(offers.strengths);

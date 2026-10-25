@@ -259,7 +259,6 @@ class DirectorDecision(BaseModel):
 # ===========================================================================
 # Helpers
 # ===========================================================================
-_NAME_PREFIX = re.compile(r"^\s*\**\s*[\w .'-]{1,24}\s*\**\s*:\s+")
 
 
 def _name_of(room: RoomConfig, participants: list[dict], sender: str) -> str | None:
@@ -304,11 +303,19 @@ def find_mentions(text: str, participants: list[dict], author: str | None = None
     return mentions
 
 
-def _clean_reply(text: str, max_words: int) -> str:
-    """Tidy a persona's reply: no "Name:" prefix, no wrapping quotes, a hard length cap."""
-    text = _NAME_PREFIX.sub("", text.strip(), count=1).strip()
-    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
-        text = text[1:-1].strip()
+def _clean_reply(text: str, max_words: int, names: list[str]) -> str:
+    """Tidy a persona's reply: no "Name:" prefix, no wrapping quotes, a hard length cap.
+
+    Only the speaker's own `names` are stripped, so openers like "Reality check:" survive.
+    """
+    alternatives = "|".join(re.escape(n) for n in names if n)
+    prefix = re.compile(rf"^\s*\**\s*(?:{alternatives})\s*\**\s*:\s*", re.IGNORECASE)
+
+    def unquote(t: str) -> str:
+        return t[1:-1].strip() if len(t) >= 2 and t[0] == t[-1] and t[0] in "\"'" else t
+
+    # Models write both '"Rohit: hey"' and 'Rohit: "hey"', so unquote on both sides of the name.
+    text = unquote(prefix.sub("", unquote(text.strip()), count=1).strip())
     text = re.sub(r"\n{3,}", "\n\n", text)
     words = text.split(" ")
     hard_cap = int(max_words * 1.75)  # the prompt asks for max_words; allow some slack before cutting
@@ -643,7 +650,8 @@ async def friend_speaks_node(state: RoomState) -> dict:
         temperature=0.9,
         run_name=f"{room.id}_{friend_id}",
     )
-    text = _clean_reply(content_text(response.content), room.max_words)
+    names = [next(p["name"] for p in state["participants"] if p["id"] == friend_id), room.persona(friend_id).name]
+    text = _clean_reply(content_text(response.content), room.max_words, names)
     if not text:
         logger.warning("%s returned an empty message; skipping", friend_id)
         return {}

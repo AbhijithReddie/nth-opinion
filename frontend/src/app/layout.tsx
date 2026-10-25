@@ -55,6 +55,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // globals.css sets smooth scrolling; this tells Next.js to switch it off during route changes.
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
     >
       <body className="huddle-backdrop flex min-h-full flex-col">

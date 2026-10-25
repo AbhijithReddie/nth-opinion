@@ -106,7 +106,8 @@ class RoomContext(BaseModel):
     participants: list[Participant] = Field(validation_alias=AliasChoices("friends", "participants"))
     language: Literal["english", "hinglish", "tenglish"] = "english"
     # Room-specific details from the setup screen, e.g. {"startup": "...", "ask": "..."} in Shark Tank.
-    context: dict[Id, Annotated[str, StringConstraints(max_length=2000)]] = Field(default_factory=dict, max_length=10)
+    # Each room checks its own per-field limits; 8000 is just an upper bound (pasted resumes can be long).
+    context: dict[Id, Annotated[str, StringConstraints(max_length=8000)]] = Field(default_factory=dict, max_length=10)
 
 
 class RoomMessageRequest(RoomContext):

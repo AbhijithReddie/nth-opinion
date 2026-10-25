@@ -12,7 +12,8 @@ going round-robin.
 | **Debate Arena**: PRO and CON argue any motion for 1-3 rounds, then a judge scores them | Live |
 | **The Group Chat**: share a problem with a WhatsApp-style group of AI friends | Live |
 | **Shark Tank Pitch Room**: pitch your startup to 3 investors who grill you, then make offers | Live |
-| Interview Panel, Future You, Roast & Toast, Study Group | Coming soon |
+| **Roast & Toast**: your resume or project gets roasted, then gets real feedback and a scorecard | Live |
+| Interview Panel, Future You, Study Group | Coming soon |
 
 The backend is FastAPI + LangGraph (Gemini models, optional LangSmith tracing),
 streaming over Server-Sent Events. The frontend is Next.js + Tailwind.
@@ -30,6 +31,7 @@ backend/
     safety.py         crisis detection, supportive mode, guardrails for every persona
     group_chat.py     The Group Chat room: personas, languages, poll
     shark_tank.py     The Shark Tank room: investors, pitch details, offers
+    roast_and_toast.py  Roast & Toast: panel, roast/toast modes, pasted material, scorecard
   run_cli.py          Debate Arena in the terminal
   chat_cli.py         Group Chat in the terminal
   test_stream.py      smoke test for the debate SSE stream
@@ -128,7 +130,8 @@ if the styles look stale.
 | `/debate` | Debate Arena |
 | `/rooms/group-chat` | The Group Chat |
 | `/rooms/shark-tank` | Shark Tank Pitch Room |
-| `/rooms/interview-panel`, `/rooms/future-you`, `/rooms/roast-and-toast`, `/rooms/study-group` | Coming soon |
+| `/rooms/roast-and-toast` | Roast & Toast |
+| `/rooms/interview-panel`, `/rooms/future-you`, `/rooms/study-group` | Coming soon |
 | `/about` | About, agent diagram, disclaimer |
 
 ### Frontend layout
@@ -204,49 +207,53 @@ are used.
 
 ### Adding a room
 
-A room is mostly a config file. For example, to add Roast & Toast:
+A room is mostly a config file. The three live chat rooms are good templates:
 
-1. Create `backend/rooms/roast_and_toast.py`:
+- `group_chat.py`: a pickable, renamable cast, plus a poll
+- `shark_tank.py`: a fixed panel, context fields and structured offers
+- `roast_and_toast.py`: modes, a large pasted context field and a scorecard
+
+For example, a Study Group room:
+
+1. Create `backend/rooms/study_group.py`:
 
    ```python
    from pydantic import BaseModel, Field
-   from rooms.engine import Mode, Persona, RoomConfig, SummarySpec, register_room
+   from rooms.engine import ContextField, Mode, Persona, RoomConfig, SummarySpec, register_room
 
    PERSONAS = (
-       Persona(id="critic", name="Kabir", emoji="🔥", color="#EF4444",
-               tagline="Roasts your resume line by line",
+       Persona(id="topper", name="Ishaan", emoji="🏆", color="#F6C453",
+               tagline="Explains it properly",
                personality="...", speaking_style="...", stance="..."),
        # ... more personas
    )
 
-   class Scores(BaseModel):          # the final structured output
-       overall: int = Field(description="1-10")
-       top_fixes: list[str]
+   class Recap(BaseModel):           # the final structured output
+       key_points: list[str]
+       quiz: list[str] = Field(description="3 quick questions")
 
-   ROAST_AND_TOAST = register_room(RoomConfig(
-       id="roast-and-toast",
-       title="Roast & Toast",
-       description="Your resume gets roasted, then gets real feedback.",
+   STUDY_GROUP = register_room(RoomConfig(
+       id="study-group",
+       title="Study Group",
+       description="Learn a topic with a confused friend, the class topper and a meme-maker.",
        personas=PERSONAS,
        languages={"english": "Casual English."},
        min_participants=3, max_participants=3,
-       speaker_instructions="You're on a panel reviewing the user's resume...",
-       director_instructions="Let each panelist roast one thing, then ...",
-       modes=(  # optional phases; the director switches with next_mode
-           Mode(id="roast", title="Roast", instructions="Playful roasting only.",
-                director_hint="Start here."),
-           Mode(id="toast", title="Real feedback", instructions="Drop the jokes; give actionable feedback.",
-                director_hint="Switch once every panelist has roasted."),
+       context_fields=(ContextField(id="topic", label="Topic", max_length=120),),
+       speaker_instructions="You're in a study group helping the user learn the topic...",
+       director_instructions="The topper explains, the confused friend asks what the user might not...",
+       modes=(  # optional phases; the director switches with next_mode, the client can too
+           Mode(id="learn", title="Learn", instructions="Explain step by step.", director_hint="Start here."),
+           Mode(id="quiz", title="Quiz", instructions="Ask the user questions.", director_hint="After the basics."),
        ),
-       summary=SummarySpec(schema=Scores, instructions="Score the resume...",
+       summary=SummarySpec(schema=Recap, instructions="Recap what was covered...",
                            finalize=lambda result, participants: result.model_dump()),
    ))
    ```
 
-2. Import it in `backend/rooms/__init__.py`:
-   `from rooms import roast_and_toast  # noqa: F401`.
+2. Import it in `backend/rooms/__init__.py`.
 
-That's it. `GET /api/rooms` lists it, and `/api/rooms/roast-and-toast/message`
+That's it. `GET /api/rooms` lists it, and `/api/rooms/study-group/message`
 and `/summary` work right away with the same safety layer, director loop,
 streaming, validation and rate limits. Tunables such as `max_messages`,
 `max_reactions`, `max_in_a_row`, `max_words` and `reaction_emojis` have
@@ -344,6 +351,7 @@ SSE events:
 | `message`   | `{"id", "friend_id", "text", "reply_to": id \| null, "mentions": [friend ids or "user"]}` |
 | `reaction`  | `{"friend_id", "message_id", "emoji"}` |
 | `safety`    | `{"helpline_text"}` |
+| `mode`      | `{"mode"}`: the director switched modes (rooms with modes only) |
 | `your_turn` | `{}`: the turn is over |
 | `error`     | `{"message"}` |
 
@@ -367,6 +375,13 @@ Same body without `message`. The Group Chat returns a poll:
 }
 ```
 
+Rooms with modes (Roast & Toast: `roast`, then `toast`) take an optional
+`"mode"` field with each message. The client sends back the latest mode it got
+from a `mode` event, or a different one when the user switches. A missing or
+unknown mode starts at the first one. Roast & Toast also requires the context
+fields `title` and `material` (pasted text, up to 6,000 characters), and
+`goal` is optional.
+
 Shark Tank returns the investors' decisions (amounts in ₹ lakhs). An offer
 without a valid amount and equity is turned into `"out"`:
 
@@ -381,6 +396,19 @@ without a valid amount and equity is turned into `"out"`:
     { "friend_id": "rustom", "decision": "out", "amount_lakh": null, "equity_percent": null,
       "conditions": null, "reason": "No moat. I'm out." }
   ]
+}
+```
+
+Roast & Toast returns a scorecard (scores are clamped to 1-10):
+
+```json
+{
+  "overall": 6,
+  "verdict": "Real projects buried under buzzwords.",
+  "scores": [ { "category": "Impact", "score": 4, "note": "Almost no numbers." } ],
+  "fixes": [ { "title": "Quantify every bullet", "detail": "Action + result...", "friend_id": "nandini" } ],
+  "best_roast": "Bro wrote a horoscope, not a resume.",
+  "best_toast": "Your projects section shows you actually build things."
 }
 ```
 

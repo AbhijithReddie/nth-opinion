@@ -104,13 +104,13 @@ export const ROOMS: RoomMeta[] = [
     title: "Roast & Toast",
     icon: "🔥",
     description: "Your resume or project gets roasted, then gets real feedback.",
-    status: "soon",
+    status: "live",
     href: "/rooms/roast-and-toast",
     accent: "#FF5C7A",
     cast: [
-      { name: "The Roaster", role: "No mercy", emoji: "🌶️" },
-      { name: "The Mentor", role: "Turns jokes into fixes", emoji: "🧭" },
-      { name: "The Recruiter", role: "Reads it like a hiring manager", emoji: "📎" },
+      { name: "Kabir", role: "The Roaster", emoji: "🌶️" },
+      { name: "Nandini", role: "The Mentor", emoji: "🧭" },
+      { name: "Sameer", role: "The Recruiter", emoji: "📎" },
     ],
   },
   {

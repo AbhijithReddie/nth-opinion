@@ -27,3 +27,9 @@ export const SHARKS: Persona[] = [
   { id: "aditya", name: "Aditya", emoji: "🚀", color: "#A78BFA", tagline: "The Visionary: asks how big this can get" },
   { id: "rustom", name: "Rustom", emoji: "🤨", color: "#F6C453", tagline: "The Skeptic: finds every hole" },
 ];
+
+export const ROAST_PANEL: Persona[] = [
+  { id: "kabir", name: "Kabir", emoji: "🌶️", color: "#FF5C7A", tagline: "The Roaster: no mercy, all love" },
+  { id: "nandini", name: "Nandini", emoji: "🧭", color: "#34D399", tagline: "The Mentor: turns jokes into fixes" },
+  { id: "sameer", name: "Sameer", emoji: "📎", color: "#F6C453", tagline: "The Recruiter: reads it like a hiring manager" },
+];

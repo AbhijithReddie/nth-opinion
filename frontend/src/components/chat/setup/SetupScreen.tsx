@@ -108,6 +108,7 @@ export function SetupScreen({
             max={f.max}
             required={f.required}
             hint={f.hint}
+            multiline={f.multiline}
           />
         ))}
       </div>

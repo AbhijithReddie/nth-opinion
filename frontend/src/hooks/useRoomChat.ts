@@ -10,6 +10,8 @@
  *   their message appears, with short gaps between messages.
  * - The user can send at any time. A new message cancels the current reply
  *   stream (AbortController) and queue, then sends with the full history.
+ * - Rooms with modes (e.g. Roast -> Toast) track the current mode, send it with
+ *   each message, and switch when the server or the user says so.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,7 +39,11 @@ interface Saved {
   setup: RoomSetup | null;
   items: ChatItem[];
   safety: string | null;
+  mode: string | null;
 }
+
+/** The mode a room starts in (null for rooms without modes). */
+const firstMode = (config: RoomChatConfig) => config.modes?.[0]?.id ?? null;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
 
@@ -59,7 +65,8 @@ function isValidSetup(config: RoomChatConfig, s: Partial<RoomSetup> | undefined)
 function isValidItem(item: ChatItem): boolean {
   if (!item || typeof item.id !== "string" || typeof item.ts !== "number") return false;
   if (item.kind === "message") return typeof item.text === "string" && Array.isArray(item.reactions);
-  return item.kind === "summary" && !!item.data && (item.type === "poll" || item.type === "offers");
+  if (item.kind === "mode") return typeof item.mode === "string";
+  return item.kind === "summary" && !!item.data && ["poll", "offers", "scorecard"].includes(item.type);
 }
 
 /** Group Chats saved before rooms were generalised used a different shape; convert them once. */
@@ -85,12 +92,13 @@ function loadSaved(config: RoomChatConfig): Saved {
   let raw = loadJson<Partial<Saved>>(config.storageKey);
   if (!raw && config.roomId === "group-chat") raw = loadLegacyGroupChat();
   if (!raw || typeof raw !== "object" || !isValidSetup(config, raw.setup ?? undefined)) {
-    return { setup: null, items: [], safety: null };
+    return { setup: null, items: [], safety: null, mode: firstMode(config) };
   }
   return {
     setup: raw.setup!,
     items: Array.isArray(raw.items) ? raw.items.filter(isValidItem) : [],
     safety: typeof raw.safety === "string" ? raw.safety : null,
+    mode: config.modes?.some((m) => m.id === raw.mode) ? raw.mode! : firstMode(config),
   };
 }
 
@@ -105,10 +113,12 @@ export function useRoomChat(config: RoomChatConfig) {
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState<ChatError | null>(null);
   const [safety, setSafety] = useState<string | null>(initial.safety);
+  const [mode, setModeState] = useState<string | null>(initial.mode);
 
   // Refs mirror the latest values for use inside async code.
   const itemsRef = useRef(items);
   const setupRef = useRef(setup);
+  const modeRef = useRef(mode);
   /** Bumped for every new reply run; queued events from older runs see a different number and stop. */
   const runRef = useRef(0);
   const streamRef = useRef<AbortController | null>(null);
@@ -121,8 +131,19 @@ export function useRoomChat(config: RoomChatConfig) {
 
   // Save after every change (only the newest items, to keep storage small).
   useEffect(() => {
-    if (setup) saveJson(config.storageKey, { setup, items: items.slice(-MAX_STORED_ITEMS), safety });
-  }, [config.storageKey, setup, items, safety]);
+    if (setup) saveJson(config.storageKey, { setup, items: items.slice(-MAX_STORED_ITEMS), safety, mode });
+  }, [config.storageKey, setup, items, safety, mode]);
+
+  /** Switch the room's mode and mark the switch in the chat with a divider. Unknown modes are ignored. */
+  const applyMode = useCallback(
+    (next: string) => {
+      if (next === modeRef.current || !config.modes?.some((m) => m.id === next)) return;
+      modeRef.current = next;
+      setModeState(next);
+      updateItems((prev) => [...prev, { kind: "mode", id: newId("mode"), ts: Date.now(), mode: next }]);
+    },
+    [config.modes, updateItems],
+  );
 
   // Leaving the page (or Next.js hiding it): stop any reply or summary in progress.
   useEffect(
@@ -219,6 +240,9 @@ export function useRoomChat(config: RoomChatConfig) {
           case "safety":
             setSafety(event.helpline_text);
             break;
+          case "mode":
+            applyMode(event.mode);
+            break;
           case "error":
             failure = event.message;
             break;
@@ -234,6 +258,7 @@ export function useRoomChat(config: RoomChatConfig) {
           room,
           history,
           { id: userMsg.id, text: userMsg.text },
+          modeRef.current,
           (event) => {
             queue = queue.then(() => handle(event));
           },
@@ -251,7 +276,7 @@ export function useRoomChat(config: RoomChatConfig) {
       setReplying(false);
       if (failure) setError({ message: failure, retry: "message" });
     },
-    [config, updateItems],
+    [applyMode, config, updateItems],
   );
 
   /** Send a message. Works while the room is still replying: that reply is cancelled. */
@@ -325,7 +350,9 @@ export function useRoomChat(config: RoomChatConfig) {
     updateItems(() => []);
     setSafety(null);
     setError(null);
-  }, [stopReply, updateItems]);
+    modeRef.current = firstMode(config);
+    setModeState(modeRef.current);
+  }, [config, stopReply, updateItems]);
 
   /** Save the setup screen and open the chat. The chat itself is kept. */
   const saveSetup = useCallback((next: RoomSetup) => {
@@ -349,6 +376,8 @@ export function useRoomChat(config: RoomChatConfig) {
     summarizing,
     error,
     safety,
+    /** Current mode id, for rooms with modes. */
+    mode,
     hasUserMessage: items.some((item) => item.kind === "message" && item.sender === "user"),
     send,
     requestSummary,
@@ -356,6 +385,8 @@ export function useRoomChat(config: RoomChatConfig) {
     clearChat,
     saveSetup,
     editSetup,
+    /** The user switches mode (e.g. "Switch to real feedback"); it applies from their next message. */
+    switchMode: applyMode,
     cancelEdit: () => setup && setEditing(false),
     dismissError: () => setError(null),
     dismissSafety: () => setSafety(null),

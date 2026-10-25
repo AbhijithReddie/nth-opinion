@@ -15,6 +15,9 @@ import { SafetyBanner } from "./SafetyBanner";
  */
 export function ChatScreen({ chat, setup }: { chat: RoomChatController; setup: RoomSetup }) {
   const { config } = chat;
+  // Rooms with modes get a button that switches to the next mode (Roast -> Toast -> Roast...).
+  const modes = config.modes ?? [];
+  const nextMode = modes.length > 1 ? modes[(modes.findIndex((m) => m.id === chat.mode) + 1) % modes.length] : undefined;
 
   function clearChat() {
     if (window.confirm("Clear this chat? Your setup stays, the messages are deleted.")) chat.clearChat();
@@ -23,7 +26,7 @@ export function ChatScreen({ chat, setup }: { chat: RoomChatController; setup: R
   return (
     <RoomProvider value={{ config, setup }}>
       <div className="mx-auto flex h-[calc(100dvh-65px)] w-full max-w-3xl flex-col overflow-hidden bg-arena-950/70 sm:border-x sm:border-white/[0.06]">
-        <ChatHeader typing={chat.typing} onEdit={chat.editSetup} onClearChat={clearChat} />
+        <ChatHeader typing={chat.typing} mode={chat.mode} onEdit={chat.editSetup} onClearChat={clearChat} />
         {chat.safety && <SafetyBanner text={chat.safety} onDismiss={chat.dismissSafety} />}
 
         <MessageList items={chat.items} typing={chat.typing} />
@@ -61,6 +64,7 @@ export function ChatScreen({ chat, setup }: { chat: RoomChatController; setup: R
             placeholder: config.composer.placeholder,
             note: config.composer.note,
           }}
+          modeSwitch={nextMode && { label: nextMode.switchLabel, onClick: () => chat.switchMode(nextMode.id) }}
         />
       </div>
     </RoomProvider>
