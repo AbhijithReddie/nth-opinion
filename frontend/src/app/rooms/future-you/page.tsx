@@ -1,7 +1,16 @@
-import { ComingSoon, comingSoonMetadata } from "@/components/rooms/ComingSoon";
+import type { Metadata } from "next";
+import { RoomChatLoader } from "@/components/chat/RoomChatLoader";
+import { getRoom } from "@/config/rooms";
 
-export const metadata = comingSoonMetadata("future-you");
+const room = getRoom("future-you");
 
+export const metadata: Metadata = {
+  title: room.title,
+  description: `${room.description} Talk it through, then get a letter from each of your future selves.`,
+  openGraph: { title: `${room.title} · Huddle`, description: room.description, url: room.href },
+};
+
+/** /rooms/future-you. No footer: the room fills the screen like a messaging app. */
 export default function FutureYouPage() {
-  return <ComingSoon roomId="future-you" />;
+  return <RoomChatLoader roomId="future-you" />;
 }

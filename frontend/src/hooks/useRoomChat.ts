@@ -66,7 +66,7 @@ function isValidItem(item: ChatItem): boolean {
   if (!item || typeof item.id !== "string" || typeof item.ts !== "number") return false;
   if (item.kind === "message") return typeof item.text === "string" && Array.isArray(item.reactions);
   if (item.kind === "mode") return typeof item.mode === "string";
-  return item.kind === "summary" && !!item.data && ["poll", "offers", "scorecard", "interview"].includes(item.type);
+  return item.kind === "summary" && !!item.data && ["poll", "offers", "scorecard", "interview", "letters"].includes(item.type);
 }
 
 /** Group Chats saved before rooms were generalised used a different shape; convert them once. */

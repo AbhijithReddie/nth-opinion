@@ -31,7 +31,7 @@ export default function AboutPage() {
             <p>
               Huddle recreates that. Every room puts several AI agents with distinct personalities around your
               problem: friends in a group chat, debaters in front of a judge, investors grilling your pitch, a panel
-              roasting your resume, interviewers testing you, and soon even future versions of you.
+              roasting your resume, interviewers testing you, and even future versions of you.
             </p>
           </div>
         </section>

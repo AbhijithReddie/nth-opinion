@@ -14,7 +14,8 @@ going round-robin.
 | **Shark Tank Pitch Room**: pitch your startup to 3 investors who grill you, then make offers | Live |
 | **Roast & Toast**: your resume or project gets roasted, then gets real feedback and a scorecard | Live |
 | **Interview Panel**: HR, a tech lead and a skeptical manager interview you from your resume | Live |
-| Future You, Study Group | Coming soon |
+| **Future You**: you at 30 and you at 50 talk through a decision with you now | Live |
+| Study Group | Coming soon |
 
 The backend is FastAPI + LangGraph (Gemini models, optional LangSmith tracing),
 streaming over Server-Sent Events. The frontend is Next.js + Tailwind.
@@ -34,6 +35,7 @@ backend/
     shark_tank.py     The Shark Tank room: investors, pitch details, offers
     roast_and_toast.py  Roast & Toast: panel, roast/toast modes, pasted material, scorecard
     interview_panel.py  Interview Panel: interviewers, role + resume, hire/no-hire result
+    future_you.py       Future You: two future selves, age check, letters + next steps
   run_cli.py          Debate Arena in the terminal
   chat_cli.py         Group Chat in the terminal
   test_stream.py      smoke test for the debate SSE stream
@@ -134,7 +136,8 @@ if the styles look stale.
 | `/rooms/shark-tank` | Shark Tank Pitch Room |
 | `/rooms/roast-and-toast` | Roast & Toast |
 | `/rooms/interview-panel` | Interview Panel |
-| `/rooms/future-you`, `/rooms/study-group` | Coming soon |
+| `/rooms/future-you` | Future You |
+| `/rooms/study-group` | Coming soon |
 | `/about` | About, agent diagram, disclaimer |
 
 ### Frontend layout
@@ -277,7 +280,11 @@ context_fields=(
 
 Clients send them as `"context": {"startup": "...", "ask": "..."}`. The API
 validates them, and the engine shows them to the director, every persona and
-the summary. See `shark_tank.py`.
+the summary. See `shark_tank.py`. For checks across fields or on their
+format, set `context_validator` on the room: a function that takes the context
+and returns an error message or `None`. Future You uses one to keep the age
+between 13 and 29. On the frontend, a context field can have a matching
+`validate` function so the setup screen catches the problem early.
 
 **Frontend:** a chat room needs:
 
@@ -422,6 +429,20 @@ majority recommend hiring.
 
 `recommendation` is one of `strong_hire`, `hire`, `no_hire` or
 `strong_no_hire`, and competency scores are 1-5.
+
+Future You requires `decision` and `age` (13-29), and `about` is optional.
+The participants are `you30` and `you50`. Its summary is a letter from each
+future self:
+
+```json
+{
+  "decision": "A job in Bangalore now, or a master's abroad?",
+  "paths": [ { "option": "Take the job", "upside": "Savings and experience", "risk": "Comfort makes it easy never to leave" } ],
+  "letters": [ { "friend_id": "you50", "letter": "I don't remember the salary. I remember who I became..." } ],
+  "next_steps": ["Talk to two seniors who took each path"],
+  "question": "If money weren't a factor, which would you choose?"
+}
+```
 
 Roast & Toast returns a scorecard (scores are clamped to 1-10):
 

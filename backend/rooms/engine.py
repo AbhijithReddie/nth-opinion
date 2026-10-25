@@ -118,6 +118,8 @@ class RoomConfig:
     max_participants: int = 4
     modes: tuple[Mode, ...] = ()
     context_fields: tuple[ContextField, ...] = ()
+    # Optional extra check on the context as a whole; returns a user-facing error or None.
+    context_validator: Callable[[dict[str, str]], str | None] | None = None
     summary: SummarySpec | None = None
     reaction_emojis: tuple[str, ...] = ("❤️", "😂", "👍", "😮", "😢", "🔥", "💯", "🙏", "👀", "😭")
     max_messages: int = 6  # persona messages per user message
@@ -178,7 +180,7 @@ class RoomConfig:
                 return f"{f.label} is required."
             if len(value) > f.max_length:
                 return f"{f.label} must be at most {f.max_length} characters."
-        return None
+        return self.context_validator(context) if self.context_validator else None
 
 
 # Every room the API serves, by id. Room modules call register_room().
@@ -298,10 +300,14 @@ def _transcript(state: RoomState, room: RoomConfig, with_ids: bool) -> str:
 def find_mentions(text: str, participants: list[dict], author: str | None = None) -> list[str]:
     """Persona ids (and "user") @mentioned in `text`. Names may contain spaces."""
     mentions = []
+    rest = text  # the text with persona mentions removed, so "@You at 50" isn't also read as "@you"
     for p in participants:
-        if p["id"] != author and re.search(rf"@{re.escape(p['name'])}(?!\w)", text, re.IGNORECASE):
-            mentions.append(p["id"])
-    if re.search(r"@(you|user)\b", text, re.IGNORECASE):
+        pattern = rf"@{re.escape(p['name'])}(?!\w)"
+        if re.search(pattern, text, re.IGNORECASE):
+            rest = re.sub(pattern, "", rest, flags=re.IGNORECASE)
+            if p["id"] != author:
+                mentions.append(p["id"])
+    if re.search(r"@(you|user)\b", rest, re.IGNORECASE):
         mentions.append("user")
     return mentions
 

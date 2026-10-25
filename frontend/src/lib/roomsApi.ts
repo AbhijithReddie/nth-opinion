@@ -6,7 +6,7 @@
  */
 
 import type { RoomChatConfig } from "@/config/roomChats";
-import type { ChatItem, InterviewResult, Offers, Poll, RoomEvent, RoomSetup, Scorecard, SummaryItem } from "./chatTypes";
+import type { ChatItem, FutureLetters, InterviewResult, Offers, Poll, RoomEvent, RoomSetup, Scorecard, SummaryItem } from "./chatTypes";
 import { API_URL, readDetail, StreamError, streamSse } from "./sseClient";
 
 /** The backend only looks at the last 40 messages, so there's no point sending more. */
@@ -77,6 +77,10 @@ function isValidSummary(type: SummaryItem["type"], data: unknown): boolean {
   if (type === "poll") {
     const poll = data as Poll;
     return typeof poll.question === "string" && Array.isArray(poll.options) && Array.isArray(poll.votes);
+  }
+  if (type === "letters") {
+    const result = data as FutureLetters;
+    return Array.isArray(result.letters) && Array.isArray(result.paths) && Array.isArray(result.next_steps);
   }
   if (type === "interview") {
     const result = data as InterviewResult;

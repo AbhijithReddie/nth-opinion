@@ -12,6 +12,7 @@ export function TextField({
   required,
   hint,
   multiline = false,
+  rows = 10,
 }: {
   id: string;
   label: string;
@@ -22,6 +23,7 @@ export function TextField({
   required: boolean;
   hint?: string;
   multiline?: boolean;
+  rows?: number;
 }) {
   const common = {
     id,
@@ -40,7 +42,7 @@ export function TextField({
       {multiline ? (
         <textarea
           {...common}
-          rows={10}
+          rows={rows}
           onChange={(e) => onChange(e.target.value)}
           className={`scroll-thin block resize-y py-3 font-mono text-sm leading-relaxed ${INPUT_CLASS}`}
         />

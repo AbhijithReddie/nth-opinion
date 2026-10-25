@@ -39,3 +39,8 @@ export const INTERVIEWERS: Persona[] = [
   { id: "karthik", name: "Karthik", emoji: "💻", color: "#38BDF8", tagline: "Tech lead: goes deep on your projects" },
   { id: "devraj", name: "Devraj", emoji: "🗂️", color: "#F6C453", tagline: "Hiring manager: skeptical, wants proof of impact" },
 ];
+
+export const FUTURE_SELVES: Persona[] = [
+  { id: "you30", name: "You at 30", emoji: "🧑", color: "#38BDF8", tagline: "Close enough to remember, far enough to see clearly" },
+  { id: "you50", name: "You at 50", emoji: "🧓", color: "#F6C453", tagline: "The long view: values, people and regrets" },
+];

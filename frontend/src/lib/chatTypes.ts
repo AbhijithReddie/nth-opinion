@@ -84,12 +84,22 @@ export interface InterviewResult {
   improvements: string[];
 }
 
+/** Future You summary: "Get letters from future you". */
+export interface FutureLetters {
+  decision: string;
+  paths: { option: string; upside: string; risk: string }[];
+  letters: { friend_id: string; letter: string }[];
+  next_steps: string[];
+  question: string;
+}
+
 /** A room's final output, shown as a card in the chat. */
 export type SummaryItem = { kind: "summary"; id: string; ts: number } & (
   | { type: "poll"; data: Poll }
   | { type: "offers"; data: Offers }
   | { type: "scorecard"; data: Scorecard }
   | { type: "interview"; data: InterviewResult }
+  | { type: "letters"; data: FutureLetters }
 );
 
 /** A divider in the chat marking a switch between room modes (e.g. Roast -> Toast). */

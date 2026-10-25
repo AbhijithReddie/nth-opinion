@@ -44,12 +44,18 @@ export function SetupScreen({
   const namesOk = !cast.renamable || selected.every((id) => names[id].trim().length > 0);
   const titleOk = !titleRequired || title.trim().length > 0;
   const missingField = config.contextFields.find((f) => f.required && !context[f.id]?.trim());
-  const canSave = countOk && namesOk && titleOk && !missingField;
+  // A field's own check (e.g. an age range), only once something has been typed.
+  const fieldError = config.contextFields
+    .map((f) => (context[f.id]?.trim() && f.validate ? f.validate(context[f.id].trim()) : null))
+    .find(Boolean);
+  const canSave = countOk && namesOk && titleOk && !missingField && !fieldError;
 
   const problem = !titleOk
     ? `Add your ${config.title.label.toLowerCase()}.`
     : missingField
       ? `Add ${missingField.label.toLowerCase()}.`
+      : fieldError
+        ? fieldError
       : !countOk
         ? `Pick ${cast.min} or ${cast.max} ${cast.noun} to continue.`
         : !namesOk
@@ -109,6 +115,7 @@ export function SetupScreen({
             required={f.required}
             hint={f.hint}
             multiline={f.multiline}
+            rows={f.rows}
           />
         ))}
       </div>

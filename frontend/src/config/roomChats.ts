@@ -7,7 +7,7 @@
  * + a page that renders <RoomChatLoader roomId="..." />.
  */
 
-import { GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, type Persona } from "./personas";
+import { FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, type Persona } from "./personas";
 
 export const LANGUAGES = [
   { id: "english", label: "English", hint: "Casual, with Indian slang" },
@@ -30,9 +30,13 @@ export interface ContextFieldConfig {
   hint?: string;
   /** A large textarea (e.g. a pasted resume) instead of a one-line input. */
   multiline?: boolean;
+  /** Textarea height in lines (default 10). */
+  rows?: number;
+  /** Extra check on the trimmed value; returns a message for the user, or null if it's fine. */
+  validate?: (value: string) => string | null;
 }
 
-export type SummaryType = "poll" | "offers" | "scorecard" | "interview";
+export type SummaryType = "poll" | "offers" | "scorecard" | "interview" | "letters";
 
 /** A phase of a room with modes (see backend Mode). The first one is where the room starts. */
 export interface RoomModeConfig {
@@ -235,6 +239,54 @@ export const ROOM_CHATS = {
     },
     summary: { type: "interview", button: "End interview & get feedback", loading: "The panel is deciding" },
     composer: { placeholder: "Answer the panel...", note: "AI interviewers for practice. Not a real hiring decision." },
+  },
+  "future-you": {
+    roomId: "future-you",
+    storageKey: "huddle.room.future-you.v1",
+    personas: FUTURE_SELVES,
+    cast: { min: 2, max: 2, defaults: ["you30", "you50"], renamable: false, heading: "Who's joining you", noun: "future selves" },
+    title: {
+      label: "The decision you're facing",
+      default: "",
+      placeholder: "e.g. Job offer in Bangalore, or a master's abroad?",
+      max: 160,
+      contextKey: "decision",
+    },
+    contextFields: [
+      {
+        id: "age",
+        label: "Your age now",
+        placeholder: "e.g. 21",
+        max: 2,
+        required: true,
+        hint: "Between 13 and 29, so 30 and 50 are still ahead of you.",
+        // Mirrors the backend check in rooms/future_you.py.
+        validate: (v) => (/^\d+$/.test(v) && +v >= 13 && +v <= 29 ? null : "Your age needs to be between 13 and 29."),
+      },
+      {
+        id: "about",
+        label: "A bit about your life right now (optional)",
+        placeholder: "Studies, work, family, what you care about, what scares you about this choice...",
+        max: 1000,
+        required: false,
+        multiline: true,
+        rows: 4,
+        hint: "The more they know, the more specific they can be.",
+      },
+    ],
+    copy: {
+      eyebrow: "Future You",
+      heading: "Ask your future selves",
+      editHeading: "Edit your decision",
+      intro: "You at 30 and you at 50 remember being exactly where you are. Talk it through with them.",
+      create: "Meet future me",
+      editMenu: "Edit decision",
+      emptyTitle: "Your future selves are here",
+      emptyIntro: "{names} want to hear what you're torn between. Start with:",
+      starters: ["Okay, here's what I'm torn between...", "What would you do if you were me?", "What did I worry about that didn't matter?"],
+    },
+    summary: { type: "letters", button: "Get letters from future you", loading: "Writing your letters" },
+    composer: { placeholder: "Talk to your future selves...", note: "Imagined perspectives, not predictions or professional advice." },
   },
 } satisfies Record<string, RoomChatConfig>;
 

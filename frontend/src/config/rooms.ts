@@ -91,7 +91,7 @@ export const ROOMS: RoomMeta[] = [
     title: "Future You",
     icon: "⏳",
     description: "You at 30 and 50 talk through a decision with you now.",
-    status: "soon",
+    status: "live",
     href: "/rooms/future-you",
     accent: "#A78BFA",
     cast: [

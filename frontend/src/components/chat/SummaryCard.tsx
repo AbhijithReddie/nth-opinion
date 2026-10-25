@@ -1,5 +1,6 @@
 import type { SummaryItem } from "@/lib/chatTypes";
 import { InterviewCard } from "./InterviewCard";
+import { LettersCard } from "./LettersCard";
 import { OffersCard } from "./OffersCard";
 import { PollCard } from "./PollCard";
 import { ScorecardCard } from "./ScorecardCard";
@@ -12,6 +13,7 @@ export function SummaryCard({ item }: { item: SummaryItem }) {
       {item.type === "offers" && <OffersCard offers={item.data} ts={item.ts} />}
       {item.type === "scorecard" && <ScorecardCard card={item.data} ts={item.ts} />}
       {item.type === "interview" && <InterviewCard result={item.data} ts={item.ts} />}
+      {item.type === "letters" && <LettersCard result={item.data} ts={item.ts} />}
     </li>
   );
 }
