@@ -1,9 +1,37 @@
-# AI Debate Arena
+# Huddle
 
-Two AI debaters (PRO and CON) argue a motion for 1-3 rounds, then an AI judge
-scores both sides and writes a decision memo. The debate is a LangGraph state
-machine (`backend/graph.py`) served by a FastAPI backend that streams the
-debate token-by-token over Server-Sent Events.
+**One problem. A room full of minds.**
+
+Huddle is a multi-agent platform: you bring a problem, and a room of AI
+personas with different personalities talks it through with you. A director
+agent decides who speaks next, so conversations flow naturally instead of
+going round-robin.
+
+| Room | Status |
+| ---- | ------ |
+| **Debate Arena**: PRO and CON argue any motion for 1-3 rounds, then a judge scores them | Live |
+| **The Group Chat**: share a problem with a WhatsApp-style group of AI friends | Live |
+| Shark Tank Pitch Room, Interview Panel, Future You, Roast & Toast, Study Group | Coming soon |
+
+The backend is FastAPI + LangGraph (Gemini models, optional LangSmith tracing),
+streaming over Server-Sent Events. The frontend is Next.js + Tailwind.
+
+## Backend layout
+
+```
+backend/
+  llm.py              shared Gemini setup: models, thinking level, fallback, timeouts, timing logs
+  graph.py            Debate Arena graph (pro -> con -> ... -> judge)
+  main.py             FastAPI app: /api/debate and /api/rooms/*
+  rooms/
+    __init__.py       registers every room
+    engine.py         the shared room engine (LangGraph director loop, summary)
+    safety.py         crisis detection, supportive mode, guardrails for every persona
+    group_chat.py     The Group Chat room: personas, languages, poll
+  run_cli.py          Debate Arena in the terminal
+  chat_cli.py         Group Chat in the terminal
+  test_stream.py      smoke test for the debate SSE stream
+```
 
 ## Running the backend on Windows
 
@@ -31,14 +59,16 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
-| Variable            | Purpose                                                        |
-| ------------------- | -------------------------------------------------------------- |
-| `GOOGLE_API_KEY`    | Gemini API key (required)                                      |
-| `GEMINI_MODEL`      | Gemini model name                                              |
-| `LANGSMITH_TRACING` | `true` to send traces to LangSmith, `false` to disable         |
-| `LANGSMITH_API_KEY` | LangSmith API key (only needed when tracing is on)             |
-| `LANGSMITH_PROJECT` | LangSmith project name                                         |
-| `FRONTEND_ORIGIN`   | Allowed CORS origins, comma-separated (default `http://localhost:3000`) |
+| Variable                | Purpose                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `GOOGLE_API_KEY`        | Gemini API key (required)                                      |
+| `GEMINI_MODEL`          | Gemini model for debaters, the judge and room personas         |
+| `GEMINI_FALLBACK_MODEL` | Optional model tried once when the main one is overloaded      |
+| `DIRECTOR_MODEL`        | Optional model for room directors and the safety check (default: `GEMINI_MODEL`) |
+| `LANGSMITH_TRACING`     | `true` to send traces to LangSmith, `false` to disable         |
+| `LANGSMITH_API_KEY`     | LangSmith API key (only needed when tracing is on)             |
+| `LANGSMITH_PROJECT`     | LangSmith project name                                         |
+| `FRONTEND_ORIGIN`       | Allowed CORS origins, comma-separated (default `http://localhost:3000`) |
 
 `.env` is git-ignored; never commit it.
 
@@ -51,7 +81,7 @@ uvicorn main:app --port 8000 --reload
 Check it is up: open <http://localhost:8000/health> (should show `{"status":"ok"}`),
 or see the interactive API docs at <http://localhost:8000/docs>.
 
-### 4. Test the stream
+### 4. Test the debate stream
 
 In a second PowerShell window (with the venv activated):
 
@@ -64,11 +94,161 @@ prints every event with a timestamp as it arrives.
 
 ### Terminal-only mode
 
-You can also run a debate without the server:
+Run a debate or a group chat without the server:
 
 ```powershell
 python run_cli.py --topic "Should homework be banned?" --rounds 2
+python chat_cli.py
+python chat_cli.py --friends rohit,priya,vikram --language hinglish
 ```
+
+In `chat_cli.py`, type messages and press Enter. Type `poll` to ask the group
+to vote and `quit` to leave. Each director decision and node timing is logged
+(add `--quiet` to hide them).
+
+## Running the frontend on Windows
+
+In a new PowerShell window:
+
+```powershell
+cd frontend
+npm install
+Copy-Item .env.example .env.local   # only the first time; edit if your backend isn't on localhost:8000
+npm run dev
+```
+
+Open <http://localhost:3000>. Restart `npm run dev` after editing `globals.css`
+if the styles look stale.
+
+| Route | Page |
+| ----- | ---- |
+| `/` | Home: hero, room grid, how it works |
+| `/debate` | Debate Arena |
+| `/rooms/group-chat` | The Group Chat |
+| `/rooms/shark-tank`, `/rooms/interview-panel`, `/rooms/future-you`, `/rooms/roast-and-toast`, `/rooms/study-group` | Coming soon |
+| `/about` | About, agent diagram, disclaimer |
+
+### Frontend layout
+
+```
+frontend/
+  public/                 huddle-logo.svg (logo + wordmark), huddle-icon.svg, favicon.svg
+  src/config/
+    rooms.ts              every room's id, title, icon, description, status and route
+    friends.ts            the six Group Chat friends + languages (ids match the backend)
+    site.ts               name, tagline, GitHub URL (placeholder), disclaimer
+  src/app/                routes (see table above) + opengraph-image.tsx (link preview)
+  src/components/
+    layout/               Navbar, Rooms dropdown, mobile drawer
+    home/ about/ rooms/   page sections, coming-soon page
+    chat/                 Group Chat UI (setup screen, messages, poll, composer, ...)
+    debate/ landing/      Debate Arena UI
+    ui/ brand/            buttons, badges, headings, the logo mark
+  src/hooks/useGroupChat.ts   chat state, SSE pacing, cancel-on-new-message, localStorage
+  src/lib/sseClient.ts        shared POST + SSE reader used by the debate and the rooms
+```
+
+To list a new room, add it to `src/config/rooms.ts`. The navbar, home grid
+and coming-soon pages pick it up automatically.
+
+### Design system
+
+The tokens live in `src/app/globals.css`:
+
+- **Surfaces:** a near-black `arena-950` to `arena-600` scale
+- **Text:** `ink`, `muted`, `faint`
+- **Brand:** violet (`brand`), the logo's speech bubble
+- **Accents:** `cyan`, `coral` and `gold`, the logo's three AI figures. The Debate Arena maps Pro, Con and Judge onto them.
+- **Support:** a calm blue, used only for wellbeing messages
+- **Type:** Bricolage Grotesque for headlines, Geist for text, Geist Mono for small labels
+- **Components:** `components/ui` holds the shared Button, StatusBadge and SectionHeading
+
+## How rooms work
+
+Every room runs on the same LangGraph loop (`backend/rooms/engine.py`):
+
+```
+START -> safety_check -> director --speak--> friend_speaks --> director
+                                  --react--> friend_reacts --> director
+                                  --end----> your_turn -> END
+```
+
+1. **safety_check** classifies the user's latest message as `normal` or
+   `crisis` (self-harm, suicidal thoughts, abuse, immediate danger) with a
+   structured-output LLM call. If the classifier itself fails, a keyword check
+   is used instead. On a crisis, every persona switches to a gentle,
+   supportive mode, the client gets a `safety` event with the Tele-MANAS
+   helpline, and the turn ends after 2-3 supportive messages.
+2. **director** sees the conversation (with message ids), who has spoken
+   this turn and the room's rules. It returns a structured decision: `speak`
+   (who, which message to reply to, a short note), `react` (who, which
+   message, which emoji) or `end`. It is not round-robin: it picks whoever
+   would naturally respond. The engine then enforces the hard rules in code:
+   - nobody sends more than 2 messages in a row
+   - at most 6 messages and 4 reactions per user message
+   - at least one reply, and on a brand-new topic everyone speaks once
+   - ids must be valid
+   A bad decision is corrected, never fatal.
+3. **friend_speaks** writes one short message in that persona's voice and
+   the chosen language. **friend_reacts** adds an emoji.
+4. **your_turn** tells the client it's the user's turn.
+
+Nodes push `typing`, `message`, `reaction`, `safety` and `your_turn` events
+through LangGraph's custom stream as they happen. The API is stateless: the
+client sends recent history with each message, and only the last 40 messages
+are used.
+
+### Adding a room
+
+A room is mostly a config file. For example, to add Roast & Toast:
+
+1. Create `backend/rooms/roast_and_toast.py`:
+
+   ```python
+   from pydantic import BaseModel, Field
+   from rooms.engine import Mode, Persona, RoomConfig, SummarySpec, register_room
+
+   PERSONAS = (
+       Persona(id="critic", name="Kabir", emoji="🔥", color="#EF4444",
+               tagline="Roasts your resume line by line",
+               personality="...", speaking_style="...", stance="..."),
+       # ... more personas
+   )
+
+   class Scores(BaseModel):          # the final structured output
+       overall: int = Field(description="1-10")
+       top_fixes: list[str]
+
+   ROAST_AND_TOAST = register_room(RoomConfig(
+       id="roast-and-toast",
+       title="Roast & Toast",
+       description="Your resume gets roasted, then gets real feedback.",
+       personas=PERSONAS,
+       languages={"english": "Casual English."},
+       min_participants=3, max_participants=3,
+       speaker_instructions="You're on a panel reviewing the user's resume...",
+       director_instructions="Let each panelist roast one thing, then ...",
+       modes=(  # optional phases; the director switches with next_mode
+           Mode(id="roast", title="Roast", instructions="Playful roasting only.",
+                director_hint="Start here."),
+           Mode(id="toast", title="Real feedback", instructions="Drop the jokes; give actionable feedback.",
+                director_hint="Switch once every panelist has roasted."),
+       ),
+       summary=SummarySpec(schema=Scores, instructions="Score the resume...",
+                           finalize=lambda result, participants: result.model_dump()),
+   ))
+   ```
+
+2. Import it in `backend/rooms/__init__.py`:
+   `from rooms import roast_and_toast  # noqa: F401`.
+
+That's it. `GET /api/rooms` lists it, and `/api/rooms/roast-and-toast/message`
+and `/summary` work right away with the same safety layer, director loop,
+streaming, validation and rate limits. Tunables such as `max_messages`,
+`max_reactions`, `max_in_a_row`, `max_words` and `reaction_emojis` have
+defaults on `RoomConfig` and can be overridden per room. If a room needs extra
+request fields (for example a resume), add them to the request models in
+`main.py` and pass them through to the engine.
 
 ## API
 
@@ -93,7 +273,7 @@ The response is an SSE stream (`text/event-stream`). Each event's `data` is JSON
 | ------------ | --------------------------------------------------------- |
 | `turn_start` | `{"speaker": "pro" \| "con", "round": 1}`                 |
 | `token`      | `{"speaker": "pro" \| "con", "text": "chunk"}`            |
-| `turn_end`   | `{"speaker", "round", "text"}` — the final text for that turn |
+| `turn_end`   | `{"speaker", "round", "text"}`: the final text for that turn |
 | `judge`      | `{"scores": {"pro": {...}, "con": {...}}, "winner": "pro" \| "con" \| "tie", "memo": "..."}` |
 | `done`       | `{}`                                                      |
 | `error`      | `{"message": "..."}`                                      |
@@ -101,11 +281,76 @@ The response is an SSE stream (`text/event-stream`). Each event's `data` is JSON
 Use the `turn_end` text as the final version of a turn: it has the 150-word
 limit applied, so it can be slightly shorter than the streamed tokens.
 
-Errors before the stream starts are returned as JSON `{"detail": "..."}`:
-`422` for invalid input, `429` when an IP has started more than 5 debates in
-the past hour.
+### `GET /api/rooms`
+
+Lists the rooms with their personas (id, name, emoji, colour, tagline),
+participant limits, languages and modes.
+
+### `POST /api/rooms/{room_id}/message`
+
+```json
+{
+  "message": "Should I text my ex happy birthday?",
+  "message_id": "u-123",
+  "history": [
+    { "id": "u-122", "sender": "user", "text": "hey guys" },
+    { "id": "rohit-a1b2c3d4", "sender": "rohit", "text": "what now 🙄", "reply_to": "u-122" }
+  ],
+  "friends": [
+    { "id": "rohit", "name": "Rohit" },
+    { "id": "priya", "name": "Priya" },
+    { "id": "meera", "name": "Didi" }
+  ],
+  "language": "english"
+}
+```
+
+- `message`: 1-1000 characters
+- `message_id`: optional, the client's id for this message, so friends' replies can point to it
+- `friends`: 3-4 of `rohit`, `priya`, `vikram`, `ananya`, `arjun`, `meera`, with names of 1-20 characters
+- `language`: `english`, `hinglish` or `tenglish`
+- `history`: earlier messages (only the last 40 are used)
+
+SSE events:
+
+| Event       | Data |
+| ----------- | ---- |
+| `typing`    | `{"friend_id"}` |
+| `message`   | `{"id", "friend_id", "text", "reply_to": id \| null, "mentions": [friend ids or "user"]}` |
+| `reaction`  | `{"friend_id", "message_id", "emoji"}` |
+| `safety`    | `{"helpline_text"}` |
+| `your_turn` | `{}`: the turn is over |
+| `error`     | `{"message"}` |
+
+If the client disconnects (for example the user sends a new message
+mid-reply and the browser aborts the request), generation stops.
+
+### `POST /api/rooms/{room_id}/summary`
+
+Same body without `message`. The Group Chat returns a poll:
+
+```json
+{
+  "question": "Should you text your ex?",
+  "options": ["Text a short wish", "Don't text"],
+  "votes": [ { "friend_id": "rohit", "option": "Don't text", "reason": "bro. no. we talked about this." } ]
+}
+```
+
+### Errors and limits
+
+Errors before a stream starts are returned as JSON `{"detail": "..."}`:
+`404` for an unknown room, `422` for invalid input, `503` when the model is
+busy (summary), and `429` for rate limits. Limits are per IP per hour and
+are tracked separately: 5 debates, 40 room messages and 10 summaries.
 
 **Deploying behind a proxy:** run uvicorn with `--proxy-headers` (and
 `--forwarded-allow-ips` set to your proxy) so rate limiting sees the real
 client IP. The rate limiter is in-memory, so it resets on restart and is per
 process.
+
+## Disclaimer
+
+Huddle's AI personas give friendly perspectives and entertainment, not
+professional advice. If you're struggling, please talk to someone you trust or
+call Tele-MANAS at 14416.

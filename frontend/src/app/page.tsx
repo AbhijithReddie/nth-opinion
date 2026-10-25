@@ -1,13 +1,18 @@
-import { Arena } from "@/components/Arena";
 import { Footer } from "@/components/Footer";
+import { BuiltWith } from "@/components/home/BuiltWith";
+import { HomeHero } from "@/components/home/HomeHero";
+import { HowHuddleWorks } from "@/components/home/HowHuddleWorks";
+import { RoomGrid } from "@/components/home/RoomGrid";
 
+/** Home: hero, the room grid, how it works, and the tech stack. Title/description come from the root layout. */
 export default function Home() {
   return (
     <>
-      {/* Faint floor grid behind the hero. */}
-      <div aria-hidden className="arena-grid pointer-events-none absolute inset-x-0 top-0 h-[36rem]" />
-      <main className="relative mx-auto w-full max-w-5xl flex-1 px-4 pt-14 pb-20 sm:px-6 sm:pt-20">
-        <Arena />
+      <main id="main" className="relative mx-auto w-full max-w-6xl flex-1 px-4 sm:px-6">
+        <HomeHero />
+        <RoomGrid />
+        <HowHuddleWorks />
+        <BuiltWith />
       </main>
       <Footer />
     </>

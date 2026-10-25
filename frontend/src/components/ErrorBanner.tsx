@@ -2,7 +2,15 @@ import type { ReactNode } from "react";
 import { AlertIcon } from "./icons";
 
 /** A friendly, non-technical error message with optional action buttons. */
-export function ErrorBanner({ message, children }: { message: string; children?: ReactNode }) {
+export function ErrorBanner({
+  message,
+  title = "The debate couldn't continue",
+  children,
+}: {
+  message: string;
+  title?: string;
+  children?: ReactNode;
+}) {
   return (
     <div
       role="alert"
@@ -11,7 +19,7 @@ export function ErrorBanner({ message, children }: { message: string; children?:
       <div className="flex flex-1 items-start gap-3">
         <AlertIcon className="mt-0.5 size-5 shrink-0 text-con" />
         <div>
-          <p className="font-semibold text-ink">The debate couldn&apos;t continue</p>
+          <p className="font-semibold text-ink">{title}</p>
           <p className="mt-0.5 text-sm text-muted">{message}</p>
         </div>
       </div>

@@ -57,7 +57,7 @@ export function DebateView({ state, onNewDebate, onRetry }: DebateViewProps) {
   }
 
   return (
-    <section ref={sectionRef} aria-label="Debate" className="scroll-mt-6 space-y-6">
+    <section ref={sectionRef} aria-label="Debate" className="scroll-mt-24 space-y-6">
       <TopicHeader topic={topic} rounds={rounds} phase={phase} onNewDebate={onNewDebate} />
 
       {/* Column labels; on phones the cards stack in speaking order instead. */}
@@ -85,7 +85,7 @@ export function DebateView({ state, onNewDebate, onRetry }: DebateViewProps) {
       {phase === "judging" && <JudgeDeliberating />}
 
       {verdict && (
-        <div ref={verdictRef} className="scroll-mt-6 space-y-6">
+        <div ref={verdictRef} className="scroll-mt-24 space-y-6">
           <Scorecard verdict={verdict} />
           <DecisionMemo memo={verdict.memo} topic={topic} />
         </div>

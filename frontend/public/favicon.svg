@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Simplified Huddle mark for 16-32px: bubble, the human, three AI heads. No antennae or eyes. -->
+  <path fill="#7563F0" d="M9 1H23A8 8 0 0 1 31 9V19A8 8 0 0 1 23 27H14L7 31.5L9 27A8 8 0 0 1 1 19V9A8 8 0 0 1 9 1Z"/>
+  <rect x="3.5" y="9.5" width="7" height="6.5" rx="2" fill="#2EE6D6"/>
+  <rect x="12.5" y="3.5" width="7" height="6.5" rx="2" fill="#FF5C7A"/>
+  <rect x="21.5" y="9.5" width="7" height="6.5" rx="2" fill="#F6C453"/>
+  <circle cx="16" cy="16.2" r="3.4" fill="#FFFFFF"/>
+  <path fill="#FFFFFF" d="M9.5 26C9.5 22.2 12.3 20.6 16 20.6S22.5 22.2 22.5 26Z"/>
+</svg>

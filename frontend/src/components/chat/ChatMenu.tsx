@@ -1,0 +1,74 @@
+"use client";
+
+import { useCallback, useId, useRef, useState } from "react";
+import { useDismiss } from "@/hooks/useDismiss";
+import { MoreIcon, PencilIcon, TrashIcon } from "../icons";
+
+/** The chat header's "⋮" menu: Edit group, Clear chat. */
+export function ChatMenu({ onEditGroup, onClearChat }: { onEditGroup: () => void; onClearChat: () => void }) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const menuId = useId();
+
+  const close = useCallback((reason?: "escape" | "outside") => {
+    setOpen(false);
+    if (reason === "escape") buttonRef.current?.focus();
+  }, []);
+  useDismiss(open, [buttonRef, menuRef], close);
+
+  function choose(action: () => void) {
+    setOpen(false);
+    action();
+  }
+
+  const itemClass =
+    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none";
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label="Chat options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => {
+          setOpen((o) => !o);
+          requestAnimationFrame(() => menuRef.current?.querySelector("button")?.focus());
+        }}
+        className="grid size-10 place-items-center rounded-xl text-muted transition hover:bg-white/[0.06] hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+      >
+        <MoreIcon className="size-5" />
+      </button>
+      {open && (
+        <ul
+          ref={menuRef}
+          id={menuId}
+          role="menu"
+          onKeyDown={(e) => {
+            // Up/Down move between the two items.
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+            e.preventDefault();
+            const items = Array.from(menuRef.current?.querySelectorAll("button") ?? []);
+            const next = (items.indexOf(document.activeElement as HTMLButtonElement) + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+            items[next]?.focus();
+          }}
+          className="animate-fade-in absolute top-full right-0 z-20 mt-1 w-48 rounded-xl border border-white/[0.08] bg-arena-800 p-1 shadow-2xl shadow-black/60"
+        >
+          <li role="none">
+            <button type="button" role="menuitem" onClick={() => choose(onEditGroup)} className={itemClass}>
+              <PencilIcon className="size-4 text-muted" /> Edit group
+            </button>
+          </li>
+          <li role="none">
+            <button type="button" role="menuitem" onClick={() => choose(onClearChat)} className={`${itemClass} text-coral`}>
+              <TrashIcon className="size-4" /> Clear chat
+            </button>
+          </li>
+        </ul>
+      )}
+    </div>
+  );
+}
