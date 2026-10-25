@@ -30,7 +30,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, StringConstraints
 from sse_starlette.sse import EventSourceResponse
 
-from graph import _content_text, graph, initial_state
+from graph import ModelBusyError, _content_text, graph, initial_state
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("debate-arena")
@@ -164,6 +164,10 @@ async def _debate_events(topic: str, rounds: int):
                         )
 
         yield _sse("done", {})
+    except ModelBusyError as exc:
+        # Timeout or overload: graph.py has already logged the details.
+        logger.warning("Debate stopped, model busy (topic=%r, rounds=%d)", topic, rounds)
+        yield _sse("error", {"message": str(exc)})
     except Exception:
         # Full details stay in the server log; the client gets a generic message.
         logger.exception("Debate failed (topic=%r, rounds=%d)", topic, rounds)
