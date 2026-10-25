@@ -44,3 +44,9 @@ export const FUTURE_SELVES: Persona[] = [
   { id: "you30", name: "You at 30", emoji: "🧑", color: "#38BDF8", tagline: "Close enough to remember, far enough to see clearly" },
   { id: "you50", name: "You at 50", emoji: "🧓", color: "#F6C453", tagline: "The long view: values, people and regrets" },
 ];
+
+export const STUDY_BUDDIES: Persona[] = [
+  { id: "bunty", name: "Bunty", emoji: "😵‍💫", color: "#A78BFA", tagline: "The confused friend: asks what you're afraid to ask" },
+  { id: "ishaan", name: "Ishaan", emoji: "🏆", color: "#F6C453", tagline: "The topper: explains it properly" },
+  { id: "tanvi", name: "Tanvi", emoji: "🤣", color: "#34D399", tagline: "The meme-maker: makes it stick" },
+];

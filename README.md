@@ -15,7 +15,7 @@ going round-robin.
 | **Roast & Toast**: your resume or project gets roasted, then gets real feedback and a scorecard | Live |
 | **Interview Panel**: HR, a tech lead and a skeptical manager interview you from your resume | Live |
 | **Future You**: you at 30 and you at 50 talk through a decision with you now | Live |
-| Study Group | Coming soon |
+| **Study Group**: learn a topic with a confused friend, the class topper and a meme-maker, then get quizzed | Live |
 
 The backend is FastAPI + LangGraph (Gemini models, optional LangSmith tracing),
 streaming over Server-Sent Events. The frontend is Next.js + Tailwind.
@@ -36,6 +36,7 @@ backend/
     roast_and_toast.py  Roast & Toast: panel, roast/toast modes, pasted material, scorecard
     interview_panel.py  Interview Panel: interviewers, role + resume, hire/no-hire result
     future_you.py       Future You: two future selves, age check, letters + next steps
+    study_group.py      Study Group: learn/quiz modes, topic + notes, study notes with a self-test
   run_cli.py          Debate Arena in the terminal
   chat_cli.py         Group Chat in the terminal
   test_stream.py      smoke test for the debate SSE stream
@@ -128,6 +129,11 @@ npm run dev
 Open <http://localhost:3000>. Restart `npm run dev` after editing `globals.css`
 if the styles look stale.
 
+**Keep the project out of OneDrive (or exclude `.next` and `node_modules` from
+syncing).** OneDrive can lock or turn build files into cloud placeholders,
+which shows up as stale dev-server errors or `EPERM ... unlink` during
+`npm run build`. Moving the folder, e.g. to `C:\dev\debate-arena`, avoids it.
+
 | Route | Page |
 | ----- | ---- |
 | `/` | Home: hero, room grid, how it works |
@@ -137,7 +143,7 @@ if the styles look stale.
 | `/rooms/roast-and-toast` | Roast & Toast |
 | `/rooms/interview-panel` | Interview Panel |
 | `/rooms/future-you` | Future You |
-| `/rooms/study-group` | Coming soon |
+| `/rooms/study-group` | Study Group |
 | `/about` | About, agent diagram, disclaimer |
 
 ### Frontend layout
@@ -162,7 +168,9 @@ frontend/
 ```
 
 To list a new room, add it to `src/config/rooms.ts`. The navbar, home grid
-and coming-soon pages pick it up automatically.
+and coming-soon pages pick it up automatically. To announce a room before it's
+built, give it `status: "soon"` and a page that renders
+`<ComingSoon roomId="..." />` (see `components/rooms/ComingSoon.tsx`).
 
 ### Design system
 
@@ -213,15 +221,18 @@ are used.
 
 ### Adding a room
 
-A room is mostly a config file. The three live chat rooms are good templates:
+A room is mostly a config file. The live chat rooms are good templates:
 
 - `group_chat.py`: a pickable, renamable cast, plus a poll
 - `shark_tank.py`: a fixed panel, context fields and structured offers
 - `roast_and_toast.py`: modes, a large pasted context field and a scorecard
+- `interview_panel.py`: one question at a time (`everyone_speaks_on_new_topic=False`), no reactions
+- `future_you.py`: a two-persona cast and a `context_validator`
+- `study_group.py`: learn/quiz modes and study notes
 
-For example, a Study Group room:
+A trimmed-down version of `study_group.py` shows the shape:
 
-1. Create `backend/rooms/study_group.py`:
+1. Create `backend/rooms/<your_room>.py`:
 
    ```python
    from pydantic import BaseModel, Field
@@ -429,6 +440,11 @@ majority recommend hiring.
 
 `recommendation` is one of `strong_hire`, `hire`, `no_hire` or
 `strong_no_hire`, and competency scores are 1-5.
+
+Study Group requires `topic`, and `level` and `notes` are optional. Its modes
+are `learn` and `quiz`. Its summary is a set of study notes: `topic`,
+`key_points`, `memory_trick`, `quiz` (a list of `{question, answer}`),
+`weak_spots` and `next_topics`.
 
 Future You requires `decision` and `age` (13-29), and `about` is optional.
 The participants are `you30` and `you50`. Its summary is a letter from each

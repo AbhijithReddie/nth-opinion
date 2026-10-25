@@ -118,13 +118,13 @@ export const ROOMS: RoomMeta[] = [
     title: "Study Group",
     icon: "📚",
     description: "Learn a topic with a confused friend, the class topper and a meme-maker.",
-    status: "soon",
+    status: "live",
     href: "/rooms/study-group",
     accent: "#34D399",
     cast: [
-      { name: "The Confused Friend", role: "Asks what you're afraid to", emoji: "😵‍💫" },
-      { name: "The Topper", role: "Explains it properly", emoji: "🏆" },
-      { name: "The Meme-Maker", role: "Makes it stick", emoji: "🤣" },
+      { name: "Bunty", role: "The confused friend", emoji: "😵‍💫" },
+      { name: "Ishaan", role: "The topper", emoji: "🏆" },
+      { name: "Tanvi", role: "The meme-maker", emoji: "🤣" },
     ],
   },
 ];

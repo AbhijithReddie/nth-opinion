@@ -45,22 +45,25 @@ export function SetupScreen({
   const titleOk = !titleRequired || title.trim().length > 0;
   const missingField = config.contextFields.find((f) => f.required && !context[f.id]?.trim());
   // A field's own check (e.g. an age range), only once something has been typed.
-  const fieldError = config.contextFields
-    .map((f) => (context[f.id]?.trim() && f.validate ? f.validate(context[f.id].trim()) : null))
-    .find(Boolean);
-  const canSave = countOk && namesOk && titleOk && !missingField && !fieldError;
+  const invalidField = config.contextFields
+    .map((f) => ({ field: f, error: context[f.id]?.trim() && f.validate ? f.validate(context[f.id].trim()) : null }))
+    .find((x) => x.error);
+  // Set when "Start" is pressed with something missing: the message turns red.
+  const [attempted, setAttempted] = useState(false);
 
-  const problem = !titleOk
-    ? `Add your ${config.title.label.toLowerCase()}.`
+  // What's stopping the user, and which input to jump to. Labels are quoted as written
+  // ("What do you want to learn?"), since they can be questions or instructions.
+  const blocker: { message: string; inputId?: string } | null = !titleOk
+    ? { message: `Fill in “${config.title.label}” to continue.`, inputId: "room-title" }
     : missingField
-      ? `Add ${missingField.label.toLowerCase()}.`
-      : fieldError
-        ? fieldError
-      : !countOk
-        ? `Pick ${cast.min} or ${cast.max} ${cast.noun} to continue.`
-        : !namesOk
-          ? `Every one of your ${cast.noun} needs a name.`
-          : "Ready when you are.";
+      ? { message: `Fill in “${missingField.label}” to continue.`, inputId: `context-${missingField.id}` }
+      : invalidField
+        ? { message: invalidField.error!, inputId: `context-${invalidField.field.id}` }
+        : !countOk
+          ? { message: `Pick ${cast.min} or ${cast.max} ${cast.noun} to continue.` }
+          : !namesOk
+            ? { message: `Every one of your ${cast.noun} needs a name.` }
+            : null;
 
   function toggle(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < cast.max ? [...s, id] : s));
@@ -68,7 +71,12 @@ export function SetupScreen({
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
+    if (blocker) {
+      // The button always looks clickable; instead of a dead disabled state, show what's missing.
+      setAttempted(true);
+      if (blocker.inputId) document.getElementById(blocker.inputId)?.focus();
+      return;
+    }
     const cleanContext = Object.fromEntries(
       config.contextFields.map((f) => [f.id, (context[f.id] ?? "").trim()]).filter(([, v]) => v),
     );
@@ -157,15 +165,15 @@ export function SetupScreen({
       </div>
 
       <div className="mt-10 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <p className="text-sm text-faint sm:mr-auto" role="status">
-          {problem}
+        <p id="setup-status" className={`text-sm sm:mr-auto ${blocker && attempted ? "text-coral" : "text-faint"}`} role="status">
+          {blocker?.message ?? "Ready when you are."}
         </p>
         {onCancel && (
           <Button variant="secondary" size="lg" onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button type="submit" size="lg" disabled={!canSave}>
+        <Button type="submit" size="lg" aria-describedby="setup-status">
           {initial ? "Save" : copy.create}
         </Button>
       </div>

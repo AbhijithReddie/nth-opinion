@@ -93,6 +93,16 @@ export interface FutureLetters {
   question: string;
 }
 
+/** Study Group summary: "Make my study notes". */
+export interface StudyNotes {
+  topic: string;
+  key_points: string[];
+  memory_trick: string;
+  quiz: { question: string; answer: string }[];
+  weak_spots: string[];
+  next_topics: string[];
+}
+
 /** A room's final output, shown as a card in the chat. */
 export type SummaryItem = { kind: "summary"; id: string; ts: number } & (
   | { type: "poll"; data: Poll }
@@ -100,6 +110,7 @@ export type SummaryItem = { kind: "summary"; id: string; ts: number } & (
   | { type: "scorecard"; data: Scorecard }
   | { type: "interview"; data: InterviewResult }
   | { type: "letters"; data: FutureLetters }
+  | { type: "notes"; data: StudyNotes }
 );
 
 /** A divider in the chat marking a switch between room modes (e.g. Roast -> Toast). */

@@ -7,7 +7,7 @@
  * + a page that renders <RoomChatLoader roomId="..." />.
  */
 
-import { FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, type Persona } from "./personas";
+import { FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, STUDY_BUDDIES, type Persona } from "./personas";
 
 export const LANGUAGES = [
   { id: "english", label: "English", hint: "Casual, with Indian slang" },
@@ -36,7 +36,7 @@ export interface ContextFieldConfig {
   validate?: (value: string) => string | null;
 }
 
-export type SummaryType = "poll" | "offers" | "scorecard" | "interview" | "letters";
+export type SummaryType = "poll" | "offers" | "scorecard" | "interview" | "letters" | "notes";
 
 /** A phase of a room with modes (see backend Mode). The first one is where the room starts. */
 export interface RoomModeConfig {
@@ -287,6 +287,48 @@ export const ROOM_CHATS = {
     },
     summary: { type: "letters", button: "Get letters from future you", loading: "Writing your letters" },
     composer: { placeholder: "Talk to your future selves...", note: "Imagined perspectives, not predictions or professional advice." },
+  },
+  "study-group": {
+    roomId: "study-group",
+    storageKey: "huddle.room.study-group.v1",
+    personas: STUDY_BUDDIES,
+    cast: { min: 3, max: 3, defaults: ["bunty", "ishaan", "tanvi"], renamable: false, heading: "Your study group", noun: "study buddies" },
+    title: { label: "What do you want to learn?", default: "", placeholder: "e.g. Photosynthesis, or Binary search trees", max: 120, contextKey: "topic" },
+    contextFields: [
+      {
+        id: "level",
+        label: "Your level (optional)",
+        placeholder: "e.g. Class 10, B.Tech 2nd year, total beginner",
+        max: 60,
+        required: false,
+      },
+      {
+        id: "notes",
+        label: "Your notes or syllabus (optional)",
+        placeholder: "Paste class notes, a syllabus or textbook points you want to cover...",
+        max: 4000,
+        required: false,
+        multiline: true,
+        rows: 6,
+      },
+    ],
+    copy: {
+      eyebrow: "Study Group",
+      heading: "Study with friends",
+      editHeading: "Edit what you're studying",
+      intro: "Learn any topic with a confused friend, the class topper and a meme-maker, then get quizzed on it.",
+      create: "Start studying",
+      editMenu: "Edit topic",
+      emptyTitle: "Let's learn {title}",
+      emptyIntro: "{names} are ready. Try:",
+      starters: ["Explain it from the very basics.", "I have an exam tomorrow, what matters most?", "Quiz me, I think I know this."],
+    },
+    summary: { type: "notes", button: "Make my study notes", loading: "Writing your notes" },
+    composer: { placeholder: "Ask, answer or say 'quiz me'...", note: "AI study buddies can make mistakes. Check important facts." },
+    modes: [
+      { id: "learn", label: "📖 Learn", divider: "📖 Back to learning", switchLabel: "📖 Explain more" },
+      { id: "quiz", label: "📝 Quiz", divider: "📝 Quiz time", switchLabel: "📝 Quiz me" },
+    ],
   },
 } satisfies Record<string, RoomChatConfig>;
 
