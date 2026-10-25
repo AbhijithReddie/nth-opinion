@@ -1,4 +1,4 @@
-"""Terminal client for Huddle's Group Chat room (no server needed).
+"""Terminal client for Nth Opinion's Group Chat room (no server needed).
 
 Usage:  python chat_cli.py
         python chat_cli.py --friends rohit,priya,vikram --language hinglish
@@ -162,7 +162,7 @@ def main() -> None:
     # Emojis on Windows terminals: make sure printing never crashes.
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    parser = argparse.ArgumentParser(description="Chat with Huddle's AI friend group in the terminal.")
+    parser = argparse.ArgumentParser(description="Chat with Nth Opinion's AI friend group in the terminal.")
     parser.add_argument("--friends", help="Comma-separated friend ids, e.g. rohit,priya,meera")
     parser.add_argument("--language", choices=list(ROOM.languages))
     parser.add_argument("--quiet", action="store_true", help="Hide director decisions and node timings")
@@ -170,7 +170,7 @@ def main() -> None:
 
     # Show the director's decisions and node timings, e.g. "Director step 2: speak friend=rohit ...".
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="   [%(name)s] %(message)s")
-    for noisy in ("httpx", "google_genai", "huddle.llm"):
+    for noisy in ("httpx", "google_genai", "nth_opinion.llm"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
     friends = ask_friends(args.friends)

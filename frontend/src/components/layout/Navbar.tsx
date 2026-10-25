@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GITHUB_URL, SITE_NAME } from "@/config/site";
-import { HuddleMark } from "../brand/HuddleMark";
+import { GITHUB_URL } from "@/config/site";
+import { LogoMark } from "../brand/LogoMark";
+import { Wordmark } from "../brand/Wordmark";
 import { GitHubIcon } from "../icons";
 import { MobileMenu } from "./MobileMenu";
 import { RoomsMenu } from "./RoomsMenu";
@@ -25,8 +26,8 @@ export function Navbar() {
           href="/"
           className="flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
         >
-          <HuddleMark className="size-9" />
-          <span className="font-display text-xl font-extrabold tracking-tight">{SITE_NAME}</span>
+          <LogoMark className="size-9 shrink-0" />
+          <Wordmark className="text-lg sm:text-xl" />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">

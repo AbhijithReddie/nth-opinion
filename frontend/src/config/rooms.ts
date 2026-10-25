@@ -1,5 +1,5 @@
 /**
- * Every Huddle room in one place. The navbar, home page grid and coming-soon
+ * Every Nth Opinion room in one place. The navbar, home page grid and coming-soon
  * pages all read from this list, so adding a room starts here.
  */
 

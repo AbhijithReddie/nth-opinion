@@ -24,11 +24,11 @@ const STEPS = [
 ];
 
 /** "How it works": four numbered steps from your problem to the room's answer. */
-export function HowHuddleWorks() {
+export function HowNthOpinionWorks() {
   return (
     <section aria-labelledby="how-title" className="py-16 sm:py-20">
       <SectionHeading id="how-title" eyebrow="How it works" title="Not one chatbot. A room full of them.">
-        Huddle is a multi-agent system. Instead of one assistant answering politely, several agents talk it through,
+        Nth Opinion is a multi-agent system. Instead of one assistant answering politely, several agents talk it through,
         with you and with each other.
       </SectionHeading>
       <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

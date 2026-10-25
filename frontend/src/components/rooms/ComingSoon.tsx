@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getRoom, LIVE_ROOMS } from "@/config/rooms";
+import { SITE_NAME } from "@/config/site";
 import { Footer } from "../Footer";
 import { ArrowRightIcon } from "../icons";
 import { ButtonLink } from "../ui/Button";
@@ -11,7 +12,7 @@ export function comingSoonMetadata(roomId: string): Metadata {
   return {
     title: `${room.title} (coming soon)`,
     description: room.description,
-    openGraph: { title: `${room.title} · Huddle`, description: room.description, url: room.href },
+    openGraph: { title: `${room.title} · ${SITE_NAME}`, description: room.description, url: room.href },
   };
 }
 

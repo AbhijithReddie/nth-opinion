@@ -1,5 +1,5 @@
 """
-Shared LLM setup for Huddle (Debate Arena + rooms).
+Shared LLM setup for Nth Opinion (Debate Arena + rooms).
 
 Everything model-related lives here so every feature behaves the same way:
 
@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_genai.chat_models import GoogleInvalidRequestError, GoogleRateLimitError
 
-logger = logging.getLogger("huddle.llm")
+logger = logging.getLogger("nth_opinion.llm")
 
 # ---------------------------------------------------------------------------
 # Configuration

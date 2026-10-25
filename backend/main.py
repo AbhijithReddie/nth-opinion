@@ -1,5 +1,5 @@
 """
-Huddle - FastAPI backend (Debate Arena + rooms).
+Nth Opinion - FastAPI backend (Debate Arena + rooms).
 
 Endpoints:
     GET  /health                        -> {"status": "ok"}
@@ -61,7 +61,7 @@ FRONTEND_ORIGINS = [
 
 RATE_WINDOW_SECONDS = 60 * 60  # all limits are per IP per hour
 
-app = FastAPI(title="Huddle API")
+app = FastAPI(title="Nth Opinion API")
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,12 +1,12 @@
 import { useId } from "react";
 
 /**
- * The Huddle logo mark: a human at the centre with three AI figures (cyan,
+ * The Nth Opinion logo mark: a human at the centre with three AI figures (cyan,
  * coral, gold) around them in a semicircle, inside a speech bubble.
- * Same artwork as public/huddle-icon.svg, inlined so it renders crisply and
+ * Same artwork as public/nth-opinion-icon.svg, inlined so it renders crisply and
  * needs no extra request.
  */
-export function HuddleMark({ className, title }: { className?: string; title?: string }) {
+export function LogoMark({ className, title }: { className?: string; title?: string }) {
   const gradientId = useId(); // unique per instance, so several logos on a page don't clash
 
   return (

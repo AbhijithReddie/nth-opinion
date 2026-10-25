@@ -1,5 +1,5 @@
 /**
- * How a Huddle room runs, drawn with plain HTML/CSS:
+ * How an Nth Opinion room runs, drawn with plain HTML/CSS:
  *   You -> Safety check -> Director <-> Agents (loop) -> back to you.
  * Stacks vertically on phones, flows left to right on wide screens.
  */

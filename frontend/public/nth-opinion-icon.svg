@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Huddle">
-  <title>Huddle</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nth Opinion">
+  <title>Nth Opinion</title>
   <defs>
-    <linearGradient id="huddle-bubble" x1="8" y1="2" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+    <linearGradient id="nth-opinion-bubble" x1="8" y1="2" x2="56" y2="58" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#9D8FFF"/>
       <stop offset="1" stop-color="#5A47D6"/>
     </linearGradient>
   </defs>
-  <!-- Soft speech bubble the huddle sits in -->
-  <path fill="url(#huddle-bubble)" d="M18 2H46A14 14 0 0 1 60 16V38A14 14 0 0 1 46 52H26L14 61L18 52A14 14 0 0 1 4 38V16A14 14 0 0 1 18 2Z"/>
+  <!-- Soft speech bubble the room sits in -->
+  <path fill="url(#nth-opinion-bubble)" d="M18 2H46A14 14 0 0 1 60 16V38A14 14 0 0 1 46 52H26L14 61L18 52A14 14 0 0 1 4 38V16A14 14 0 0 1 18 2Z"/>
   <!-- Left AI figure (cyan) -->
   <g fill="#2EE6D6">
     <path d="M15 25V21.6" stroke="#2EE6D6" stroke-width="1.6" stroke-linecap="round"/>

@@ -1,5 +1,5 @@
 """
-Huddle room engine: one LangGraph loop shared by every room.
+Nth Opinion room engine: one LangGraph loop shared by every room.
 
 A room (Group Chat, Shark Tank, Interview Panel, ...) is just a RoomConfig:
 its personas, how its director should run turn-taking, optional modes, and an
@@ -43,7 +43,7 @@ from pydantic import BaseModel, Field
 from llm import DIRECTOR_MODEL_NAME, ModelBusyError, content_text, invoke, timed
 from rooms.safety import GUARDRAILS, HELPLINE_TEXT, SUPPORTIVE_MODE, classify_message
 
-logger = logging.getLogger("huddle.rooms")
+logger = logging.getLogger("nth_opinion.rooms")
 
 
 # ===========================================================================

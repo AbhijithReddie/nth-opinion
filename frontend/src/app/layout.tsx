@@ -20,7 +20,7 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
 });
 
-// Pages set their own `title` and `description`; the template adds " · Huddle".
+// Pages set their own `title` and `description`; the template adds " · Nth Opinion".
 // The Open Graph image comes from app/opengraph-image.tsx.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -59,7 +59,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
     >
-      <body className="huddle-backdrop flex min-h-full flex-col">
+      <body className="site-backdrop flex min-h-full flex-col">
         <a
           href="#main"
           className="sr-only z-50 rounded-lg bg-brand px-3 py-2 text-arena-950 focus:not-sr-only focus:fixed focus:top-3 focus:left-3"

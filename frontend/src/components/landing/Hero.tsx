@@ -6,7 +6,7 @@ export function Hero() {
     <header className="animate-fade-up text-center">
       <p className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[11px] tracking-[0.2em] text-muted uppercase">
         <span className="size-1.5 animate-pulse rounded-full bg-con" />
-        Huddle room · Debate Arena
+        Nth Opinion room · Debate Arena
       </p>
       <h1 className="font-display text-[2.6rem] leading-[0.95] font-extrabold tracking-tight text-balance sm:text-6xl md:text-7xl">
         Two AIs enter.

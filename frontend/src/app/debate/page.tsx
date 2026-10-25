@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Arena } from "@/components/Arena";
 import { Footer } from "@/components/Footer";
 import { getRoom } from "@/config/rooms";
+import { SITE_NAME } from "@/config/site";
 
 const room = getRoom("debate");
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: room.title,
   description:
     "Pick a topic and watch two AI debaters argue it out live, then get a scored verdict from an AI judge.",
-  openGraph: { title: `${room.title} · Huddle`, description: room.description, url: room.href },
+  openGraph: { title: `${room.title} · ${SITE_NAME}`, description: room.description, url: room.href },
 };
 
 export default function DebatePage() {

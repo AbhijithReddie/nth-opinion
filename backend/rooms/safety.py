@@ -1,5 +1,5 @@
 """
-Shared safety layer for every Huddle room.
+Shared safety layer for every Nth Opinion room.
 
 * GUARDRAILS: rules appended to every persona's prompt, in every room.
 * SUPPORTIVE_MODE: replaces a persona's usual style once a crisis is detected.
@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 
 from llm import DIRECTOR_MODEL_NAME, ModelBusyError, invoke
 
-logger = logging.getLogger("huddle.safety")
+logger = logging.getLogger("nth_opinion.safety")
 
 HELPLINE_TEXT = (
     "If you're going through a hard time, you can call Tele-MANAS at 14416 "

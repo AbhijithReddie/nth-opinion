@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Huddle design system.
+ * Nth Opinion design system.
  *
  * Surfaces: a near-black "arena" scale (950 = page, 900 = cards, 800/700 = raised, 600 = borders/disabled).
  * Text:     ink (primary), muted (secondary), faint (labels, hints).
@@ -168,7 +168,7 @@ body {
 }
 
 /* Page lighting: a violet glow behind the navbar plus faint cyan and coral corners. */
-.huddle-backdrop {
+.site-backdrop {
   background:
     radial-gradient(50rem 30rem at 50% -12%, color-mix(in srgb, var(--color-brand) 16%, transparent), transparent 65%),
     radial-gradient(40rem 30rem at 0% 0%, color-mix(in srgb, var(--color-cyan) 7%, transparent), transparent 60%),

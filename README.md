@@ -1,8 +1,10 @@
-# Huddle
+# Nth Opinion
 
-**One problem. A room full of minds.**
+**Why stop at a second?**
 
-Huddle is a multi-agent platform: you bring a problem, and a room of AI
+One question. A room full of AI minds.
+
+Nth Opinion is a multi-agent platform: you bring a problem, and a room of AI
 personas with different personalities talks it through with you. A director
 agent decides who speaks next, so conversations flow naturally instead of
 going round-robin.
@@ -150,7 +152,7 @@ which shows up as stale dev-server errors or `EPERM ... unlink` during
 
 ```
 frontend/
-  public/                 huddle-logo.svg (logo + wordmark), huddle-icon.svg, favicon.svg
+  public/                 nth-opinion-logo.svg (logo + wordmark), nth-opinion-icon.svg, favicon.svg
   src/config/
     rooms.ts              every room's id, title, icon, description, status and route
     personas.ts           each chat room's personas (ids match the backend)
@@ -487,6 +489,6 @@ process.
 
 ## Disclaimer
 
-Huddle's AI personas give friendly perspectives and entertainment, not
+Nth Opinion's AI personas give friendly perspectives and entertainment, not
 professional advice. If you're struggling, please talk to someone you trust or
 call Tele-MANAS at 14416.

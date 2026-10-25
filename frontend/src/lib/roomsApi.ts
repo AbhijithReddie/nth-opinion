@@ -27,7 +27,7 @@ const SUMMARY_TIMEOUT_MS = 90_000;
 const EVENT_TYPES = new Set(["typing", "message", "reaction", "safety", "mode", "your_turn", "error"]);
 const FINAL_EVENTS = new Set(["your_turn", "error"]);
 
-const UNREACHABLE = "Can't reach the Huddle server. Make sure the backend is running and try again.";
+const UNREACHABLE = "Can't reach the Nth Opinion server. Make sure the backend is running and try again.";
 
 /** The parts of every request that describe the room: history, cast, language and context. */
 function roomBody(config: RoomChatConfig, setup: RoomSetup, items: ChatItem[]) {

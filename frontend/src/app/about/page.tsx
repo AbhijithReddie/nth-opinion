@@ -1,35 +1,39 @@
 import type { Metadata } from "next";
 import { AgentDiagram } from "@/components/about/AgentDiagram";
-import { HuddleMark } from "@/components/brand/HuddleMark";
+import { LogoMark } from "@/components/brand/LogoMark";
+import { Wordmark } from "@/components/brand/Wordmark";
 import { Footer } from "@/components/Footer";
 import { TECH_STACK } from "@/components/home/BuiltWith";
 import { HeartIcon } from "@/components/icons";
 import { ButtonLink } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { DISCLAIMER, SITE_TAGLINE } from "@/config/site";
+import { DISCLAIMER, SITE_EXPLAINER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "What Huddle is, how its AI agents and director work, and the tech behind it.",
-  openGraph: { title: "About · Huddle", url: "/about" },
+  description: "What Nth Opinion is, how its AI agents and director work, and the tech behind it.",
+  openGraph: { title: `About · ${SITE_NAME}`, url: "/about" },
 };
 
-/** About: what Huddle is, how the agents + director work (diagram), tech stack and the disclaimer. */
+/** About: what Nth Opinion is, how the agents + director work (diagram), tech stack and the disclaimer. */
 export default function AboutPage() {
   return (
     <>
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 space-y-16 px-4 py-14 sm:px-6 sm:py-20">
         <section className="animate-fade-up text-center">
-          <HuddleMark className="mx-auto size-16" />
-          <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">About Huddle</h1>
+          <LogoMark className="mx-auto size-16" />
+          <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+            About <Wordmark />
+          </h1>
           <p className="mt-2 font-display text-xl text-brand">{SITE_TAGLINE}</p>
+          <p className="mt-1 text-base text-muted">{SITE_EXPLAINER}</p>
           <div className="mx-auto mt-6 max-w-2xl space-y-4 text-left text-base leading-relaxed text-muted sm:text-lg">
             <p>
               Most AI chat is one assistant giving one careful answer. Real advice rarely works like that. You ask
               your friends, and one roasts you, one hypes you up, one points out the risk you were ignoring.
             </p>
             <p>
-              Huddle recreates that. Every room puts several AI agents with distinct personalities around your
+              Nth Opinion recreates that. Why stop at a second opinion? Every room puts several AI agents with distinct personalities around your
               problem: friends in a group chat, debaters in front of a judge, investors grilling your pitch, a panel
               roasting your resume, interviewers testing you, future versions of you, and a study group that quizzes you.
             </p>

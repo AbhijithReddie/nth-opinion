@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { LIVE_ROOMS } from "@/config/rooms";
-import { DISCLAIMER, GITHUB_URL, SITE_NAME, SITE_TAGLINE } from "@/config/site";
-import { HuddleMark } from "./brand/HuddleMark";
+import { DISCLAIMER, GITHUB_URL, SITE_EXPLAINER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
+import { LogoMark } from "./brand/LogoMark";
+import { Wordmark } from "./brand/Wordmark";
 import { GitHubIcon } from "./icons";
 
 /** Site footer: brand, quick links, the disclaimer and tech credits. */
@@ -11,16 +12,18 @@ export function Footer() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <Link href="/" className="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none">
-            <HuddleMark className="size-8" />
-            <span className="font-display text-lg font-extrabold">{SITE_NAME}</span>
+            <LogoMark className="size-8" />
+            <Wordmark className="text-lg" />
           </Link>
-          <p className="mt-2 text-sm text-muted">{SITE_TAGLINE}</p>
+          <p className="mt-2 text-sm text-muted">
+            {SITE_TAGLINE} {SITE_EXPLAINER}
+          </p>
           <p className="mt-4 max-w-sm text-xs leading-relaxed text-faint">{DISCLAIMER}</p>
         </div>
 
         <FooterLinks title="Live rooms" links={LIVE_ROOMS.map((r) => ({ href: r.href, label: r.title }))} />
         <FooterLinks
-          title="Huddle"
+          title={SITE_NAME}
           links={[
             { href: "/", label: "Home" },
             { href: "/about", label: "About" },

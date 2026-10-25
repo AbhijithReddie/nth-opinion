@@ -1,5 +1,5 @@
 """
-Huddle rooms.
+Nth Opinion rooms.
 
 Importing this package registers every room with the engine. To add a room,
 write a config module (see group_chat.py) and import it below.
