@@ -34,6 +34,7 @@ backend/
   main.py             FastAPI app: /api/debate and /api/rooms/*
   agent_trace.py      "Behind the scenes" trace events (node starts/ends, decisions, safety mode)
   languages.py        the shared language registry (GET /api/languages)
+  tts.py              optional AI voices for "Read replies aloud" (POST /api/tts)
   persona_builder.py  "Build your own friend": a custom persona from a short description
   documents.py        document uploads: type detection, PDF/DOCX/TXT extraction, the digest
   samples/            made-up sample documents (resume, job description, pitch deck) for replays and evals
@@ -931,6 +932,52 @@ English, Hinglish, Tenglish, Tanglish (Tamil), Kanglish (Kannada), Manglish
 - **Evals.** `language_adherence` covers every mixed language, and its Roman
   script check rejects Devanagari (Hindi, Marathi), Bengali, Tamil, Telugu,
   Kannada and Malayalam characters.
+
+## Voice: talk, listen and live captions
+
+Every room, the Debate Arena (and its demo replays) can be spoken to and listened to.
+The pieces are reusable modules (`frontend/src/lib/voice/`, `hooks/useVoice.ts`,
+`hooks/useDictation.ts`, `components/voice/`) for the coming call mode.
+
+**Voice input** (the mic next to the message box, the debate topic and the setup
+fields) uses the browser's speech recognition (Web Speech API). Where it isn't
+available (e.g. Firefox) the mic is hidden. Tap to talk, tap again to stop; it
+also stops after a short silence. The words appear live in the box and are never
+sent by themselves unless **Hands-free** is on. The recognition language follows
+the room's language (English and Hinglish: English (India), Tenglish: Telugu,
+Tanglish: Tamil, and so on) and can be changed. Recognition in Indian languages
+may come back in native script: the rooms understand it and still reply in the
+chosen Roman-script mix. A one-time note explains that in Chrome the audio is
+processed by Google.
+
+**Read replies aloud** (the speaker button in the room header, off by default
+because browsers only allow audio after a click) reads new replies in order,
+never overlapping; each message also has a small play button. The captions bar
+has speed (0.75x to 1.5x), skip and stop. Using the mic or sending a message
+stops it. Before speaking, emojis, markdown and links are removed, @mentions are
+read as names, and reactions aren't read. The support banner is read gently.
+In the Debate Arena, Pro, Con and the Judge have different voices, and the
+decision memo can be read too. The choice is remembered on the device.
+
+- **Browser voices (default):** `speechSynthesis`. Each persona gets a voice
+  (Indian English first, then other English voices) plus its own pitch and rate
+  (`frontend/src/config/voices.ts`), so they sound different even on devices
+  with one or two voices.
+- **AI voices (optional):** set `TTS_PROVIDER=gemini` on the backend to turn on
+  `POST /api/tts` (`{ text, persona_id, language }` -> WAV). It uses the
+  TTS-capable Gemini model in `TTS_MODEL` with the same `GOOGLE_API_KEY`, and a
+  voice per persona (`backend/tts.py`). Audio is cached in memory (LRU, keyed by
+  a hash of the text and voice) and limited to 60 requests per IP per hour.
+  The frontend checks `GET /api/tts/status`; if AI voices are off, fail or run
+  out of quota, that message quietly uses a browser voice. With the default
+  `TTS_PROVIDER=browser` the endpoint is off and costs nothing.
+
+**Live captions:** while a message is read, its words are highlighted as they're
+spoken, and a captions bar at the bottom shows the speaker and the current line.
+Word timings come from the browser's word events where available, and are
+estimated from the text and audio length otherwise (always for AI voices).
+Captions can be switched off (the CC button), and with reduced motion the
+highlight is a plain underline.
 
 ## Installable app (PWA)
 

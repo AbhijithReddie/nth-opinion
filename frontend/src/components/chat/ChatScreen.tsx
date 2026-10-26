@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { buildFlow } from "@/config/flows";
 import { resolvePersona } from "@/config/roomChats";
 import { getRoom } from "@/config/rooms";
 import { useBehindTheScenes, useWideScreen } from "@/hooks/useBehindTheScenes";
+import { useReadAloud } from "@/hooks/useReadAloud";
 import type { RoomChatController } from "@/hooks/useRoomChat";
 import type { RoomSetup } from "@/lib/chatTypes";
 import { offersReplay } from "@/lib/replay";
+import type { SpeakRequest } from "@/lib/voice/player";
 import { CloseIcon, RefreshIcon } from "../icons";
 import { DemoNotice, slowNoticeKind } from "../replay/DemoNotice";
 import { TracePanel, TraceSheet, type TracePanelProps } from "../trace/TracePanel";
+import { CaptionsBar } from "../voice/VoiceOutput";
+import { Avatar } from "./Avatar";
 import { ChatHeader } from "./ChatHeader";
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
@@ -64,6 +68,23 @@ export function ChatScreen({
     nameOf: (id) =>
       [...setup.participants, ...(setup.guests ?? [])].find((p) => p.id === id)?.name ?? resolvePersona(config, setup, id)?.name ?? "Someone",
     onClose: () => setBehindTheScenes(false),
+  };
+
+  // Read new replies aloud (when that's on): persona messages and the support banner, never reactions.
+  const readable = useMemo<SpeakRequest[]>(() => {
+    const requests: SpeakRequest[] = chat.items.flatMap((item) =>
+      item.kind === "message" && item.sender !== "user"
+        ? [{ key: item.id, speakerId: item.sender, speakerName: trace.nameOf(item.sender), text: item.text, language: setup.language }]
+        : [],
+    );
+    if (chat.safety) requests.push({ key: `safety:${chat.safety}`, speakerId: "system", speakerName: "Support", text: chat.safety });
+    return requests;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- names only change with the setup
+  }, [chat.items, chat.safety, setup]);
+  useReadAloud(readable);
+  const speakerAvatar = (id: string) => {
+    const meta = resolvePersona(config, setup, id);
+    return meta ? <Avatar persona={meta} /> : null;
   };
 
   const slowNotice = slowNoticeKind(chat.slow, !!onWatchDemo);
@@ -124,6 +145,7 @@ export function ChatScreen({
             ))}
           {!chat.error && slowNotice && <DemoNotice kind={slowNotice} onWatch={onWatchDemo} className="mx-3 mb-2 sm:mx-4" />}
           {behindTheScenes && !wide && <TraceSheet {...trace} />}
+          <CaptionsBar avatar={speakerAvatar} />
 
           {replayBar ?? (
             <Composer
@@ -131,6 +153,7 @@ export function ChatScreen({
               initialText={draft.text}
               autoFocus={draft.key > 0 || !!initialDraft}
               onSend={chat.send}
+              language={setup.language}
               onSummary={chat.requestSummary}
               canSummarize={chat.hasUserMessage}
               summarizing={chat.summarizing}

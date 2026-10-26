@@ -1,5 +1,6 @@
 "use client";
 
+import { voice } from "@/lib/voice/player";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildFlow } from "@/config/flows";
 import { DEBATERS } from "@/config/personas";
@@ -35,7 +36,10 @@ export function Arena() {
   const [behindTheScenes, setBehindTheScenes] = useBehindTheScenes();
   const wide = useWideScreen();
   // The panel asks the server for trace events, so the choice is read when a debate starts.
-  const startDebate = (topic: string, rounds: number, language = "english") => start(topic, rounds, behindTheScenes, language);
+  const startDebate = (topic: string, rounds: number, language = "english") => {
+    voice.stop(); // starting a debate stops anything being read aloud
+    start(topic, rounds, behindTheScenes, language);
+  };
 
   // Errors before the first turn (rate limit, server down, bad input) belong next to the form.
   const earlyError = state.phase === "error" && state.turns.length === 0 ? state.error : null;

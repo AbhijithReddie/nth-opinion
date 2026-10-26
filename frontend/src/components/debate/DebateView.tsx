@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { hashOf } from "@/config/voices";
+import { useReadAloud } from "@/hooks/useReadAloud";
+import type { SpeakRequest } from "@/lib/voice/player";
 import type { DebateState } from "@/hooks/useDebate";
 import { SIDES } from "@/lib/sides";
 import type { Speaker, Turn } from "@/lib/types";
@@ -15,6 +18,24 @@ import { NewDebateButton } from "./NewDebateButton";
 import { Scorecard } from "./Scorecard";
 import { TopicHeader } from "./TopicHeader";
 import { TurnCard } from "./TurnCard";
+import { CaptionsBar } from "../voice/VoiceOutput";
+
+const SPEAKER_NAMES = { pro: "Pro", con: "Con", judge: "The Judge" } as const;
+
+/** What can be read aloud from a debate: each finished speech, then the decision memo. Keys change with the text, so a re-run is read again. */
+export function debateSpeech(turns: Turn[], memo: string | undefined, language: string): SpeakRequest[] {
+  const requests: SpeakRequest[] = turns
+    .filter((t) => t.complete && t.text.trim())
+    .map((t) => ({ key: `debate:${t.speaker}:${t.round}:${hashOf(t.text)}`, speakerId: t.speaker, speakerName: SPEAKER_NAMES[t.speaker], text: t.text, language }));
+  if (memo) requests.push({ key: `debate:memo:${hashOf(memo)}`, speakerId: "judge", speakerName: SPEAKER_NAMES.judge, text: memo, language });
+  return requests;
+}
+
+/** A small round badge for the captions bar: P, C or the gavel colour for the judge. */
+function sideBadge(id: string) {
+  const look = id === "pro" ? "bg-pro-soft text-pro-deep" : id === "con" ? "bg-con-soft text-con-deep" : "bg-judge-soft text-judge-deep";
+  return <span aria-hidden className={`grid size-8 shrink-0 place-items-center rounded-full font-display text-sm font-semibold ${look}`}>{id === "judge" ? "J" : id === "pro" ? "P" : "C"}</span>;
+}
 
 interface DebateViewProps {
   state: DebateState;
@@ -38,6 +59,9 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
   const { phase, topic, rounds, turns, verdict, error } = state;
   const verdictRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  // Read each finished speech and the memo aloud, when that's on (also for demo replays).
+  const speech = useMemo(() => debateSpeech(turns, verdict?.memo, state.language), [turns, verdict, state.language]);
+  useReadAloud(speech);
 
   // Bring the arena into view when a debate starts, and the verdict when it lands.
   useEffect(() => {
@@ -57,7 +81,10 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
   /** The card for one side in one round: a real turn, the pending placeholder, or an empty slot. */
   function cell(speaker: Speaker, round: number) {
     const turn = turns.find((t) => t.speaker === speaker && t.round === round);
-    if (turn) return <TurnCard speaker={speaker} round={round} text={turn.text} streaming={!turn.complete} />;
+    if (turn) {
+      const request = turn.complete ? speech.find((r) => r.speakerId === speaker && r.key.startsWith(`debate:${speaker}:${round}:`)) : undefined;
+      return <TurnCard speaker={speaker} round={round} text={turn.text} streaming={!turn.complete} speech={request} />;
+    }
     if (pending?.speaker === speaker && pending.round === round) {
       return <TurnCard speaker={speaker} round={round} text="" streaming />;
     }
@@ -95,7 +122,7 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
       {verdict && (
         <div ref={verdictRef} className="scroll-mt-24 space-y-6">
           <Scorecard verdict={verdict} />
-          <DecisionMemo memo={verdict.memo} topic={topic} />
+          <DecisionMemo memo={verdict.memo} topic={topic} speech={speech.find((r) => r.key.startsWith("debate:memo:"))} />
         </div>
       )}
 
@@ -112,6 +139,8 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
           <NewDebateButton onClick={onNewDebate} />
         </ErrorBanner>
       )}
+
+      <CaptionsBar avatar={sideBadge} className="sticky bottom-0 z-20 -mx-1 rounded-2xl border shadow-lift" />
 
       {phase === "done" && (
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

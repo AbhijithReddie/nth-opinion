@@ -223,6 +223,7 @@ export function SetupScreen({
             hint={f.replacedBy ? `${f.hint ?? ""} Or upload your ${DOC_LABELS[f.replacedBy].toLowerCase()} below instead.`.trim() : f.hint}
             multiline={f.multiline}
             rows={f.rows}
+            voiceLanguage={language}
           />
         ))}
       </div>

@@ -9,6 +9,7 @@ import { TOPIC_MAX, TOPIC_MIN } from "@/lib/api";
 import { ErrorBanner } from "../ErrorBanner";
 import { WatchDemoButton } from "../replay/DemoNotice";
 import { TypingIndicator } from "../TypingIndicator";
+import { useDictateInto } from "../voice/useDictateInto";
 import { RoundsSelector } from "./RoundsSelector";
 import { SampleTopics } from "./SampleTopics";
 
@@ -36,6 +37,15 @@ export function DebateForm({ running, error, notice, onStart, onWatchDemo, input
   const [picked, setLanguage] = useState<Language | null>(null);
   const language = picked ?? preferred;
   const [inputError, setInputError] = useState<string | null>(null);
+  const mic = useDictateInto({
+    value: topic,
+    language,
+    max: TOPIC_MAX,
+    onChange: (t) => {
+      setTopic(t);
+      setInputError(null);
+    },
+  });
 
   const length = topic.trim().length;
   const nearLimit = topic.length > TOPIC_MAX - 20;
@@ -90,6 +100,8 @@ export function DebateForm({ running, error, notice, onStart, onWatchDemo, input
             }
           }}
           className={`block w-full resize-none rounded-2xl border bg-canvas px-4 pt-3 pb-8 text-base text-ink placeholder:text-faint transition focus:outline-none disabled:opacity-60 sm:text-lg ${
+            mic.button ? "pr-14" : ""
+          } ${
             inputError ? "border-con/60 focus:ring-2 focus:ring-con/30" : "border-line-strong focus:border-judge-deep/60 focus:ring-2 focus:ring-judge/40"
           }`}
         />
@@ -101,7 +113,9 @@ export function DebateForm({ running, error, notice, onStart, onWatchDemo, input
         >
           {topic.length}/{TOPIC_MAX}
         </span>
+        {mic.button && !running && <div className="absolute top-2 right-2">{mic.button}</div>}
       </div>
+      {mic.options}
       <p id="topic-error" role="alert" className="min-h-5 pt-1.5 text-sm text-con-deep">
         {inputError}
       </p>

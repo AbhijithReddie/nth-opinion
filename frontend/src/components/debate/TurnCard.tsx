@@ -1,6 +1,8 @@
 import { SIDES } from "@/lib/sides";
 import type { Speaker } from "@/lib/types";
+import type { SpeakRequest } from "@/lib/voice/player";
 import { TypingIndicator } from "../TypingIndicator";
+import { PlayButton, SpokenText } from "../voice/VoiceOutput";
 
 interface TurnCardProps {
   speaker: Speaker;
@@ -8,10 +10,12 @@ interface TurnCardProps {
   text: string;
   /** Tokens are still arriving: show a caret and a typing indicator. */
   streaming: boolean;
+  /** The finished speech, for read aloud and captions. */
+  speech?: SpeakRequest;
 }
 
 /** One speech by Pro or Con, labelled with its round. Text grows live while streaming. */
-export function TurnCard({ speaker, round, text, streaming }: TurnCardProps) {
+export function TurnCard({ speaker, round, text, streaming, speech }: TurnCardProps) {
   const side = SIDES[speaker];
   const waiting = streaming && text.length === 0;
 
@@ -32,6 +36,7 @@ export function TurnCard({ speaker, round, text, streaming }: TurnCardProps) {
           </span>
           <span className="font-mono text-xs tracking-wider text-muted uppercase">Round {round}</span>
         </div>
+        {speech && <PlayButton request={speech} />}
         {streaming && (
           <span className={`flex items-center gap-2 font-mono text-[11px] uppercase ${side.text}`}>
             {waiting ? "Thinking" : "Speaking"}
@@ -48,7 +53,7 @@ export function TurnCard({ speaker, round, text, streaming }: TurnCardProps) {
         </div>
       ) : (
         <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-ink">
-          {text}
+          {speech ? <SpokenText messageKey={speech.key}>{text}</SpokenText> : text}
           {streaming && (
             <span aria-hidden className={`animate-caret ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 ${side.bar}`} />
           )}

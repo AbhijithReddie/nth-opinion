@@ -123,7 +123,10 @@ def _language_rule(state: DebateState) -> str:
     language = state.get("language", "english")
     if language == "english":
         return ""
-    return f" Language: {language_style(language)} Whatever the language, keep the argument clear, well-structured and well-reasoned."
+    return (
+        f" Language: {language_style(language)} Whatever the language, keep the argument clear, well-structured and "
+        "well-reasoned. The motion may be written in a native script (e.g. from voice input); still write in Roman script."
+    )
 
 
 def _node_info(node: str, label: str, round_no: int | None = None) -> dict:

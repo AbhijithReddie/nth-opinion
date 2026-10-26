@@ -5,6 +5,7 @@ import { MessageText } from "./MessageText";
 import { Reactions } from "./Reactions";
 import { ReplyQuote } from "./ReplyQuote";
 import { useRoom } from "./RoomContext";
+import { PlayButton, SpokenText } from "../voice/VoiceOutput";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -18,7 +19,7 @@ interface MessageBubbleProps {
 
 /** One chat message: personas on the left with avatar and coloured name, the user on the right. */
 export function MessageBubble({ message, original, grouped, highlighted, onJump }: MessageBubbleProps) {
-  const { persona, nameOf, isGuest } = useRoom();
+  const { persona, nameOf, isGuest, setup } = useRoom();
   const mine = message.sender === "user";
   const guest = !mine && isGuest(message.sender);
   const author = mine ? undefined : persona(message.sender);
@@ -51,8 +52,16 @@ export function MessageBubble({ message, original, grouped, highlighted, onJump 
             {message.replyTo && <ReplyQuote original={original} onJump={onJump} inverse={mine} />}
             <p className="break-words whitespace-pre-wrap">
               <span className="sr-only">{name}: </span>
-              <MessageText text={message.text} inverse={mine} />
+              <SpokenText messageKey={message.id}>
+                <MessageText text={message.text} inverse={mine} />
+              </SpokenText>
             </p>
+            {!mine && (
+              <PlayButton
+                request={{ key: message.id, speakerId: message.sender, speakerName: name, text: message.text, language: setup.language }}
+                className="float-right -mr-1.5 -mb-1 ml-1"
+              />
+            )}
             <time
               dateTime={new Date(message.ts).toISOString()}
               className={`float-right mt-1 ml-3 text-[10px] leading-none ${mine ? "text-white/90" : "text-faint"}`}

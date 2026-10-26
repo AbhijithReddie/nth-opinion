@@ -321,3 +321,19 @@ body {
   stroke-dasharray: 6 6;
   animation: trace-flow 0.6s linear infinite;
 }
+
+/* Live captions: the word being read aloud (voice output). Reduced motion: no glide, just an underline. */
+.spoken-word {
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-judge) 45%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-judge) 45%, transparent);
+  transition: background-color 0.12s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spoken-word {
+    background-color: transparent;
+    box-shadow: none;
+    text-decoration: underline 2px var(--color-judge-deep);
+    text-underline-offset: 3px;
+  }
+}

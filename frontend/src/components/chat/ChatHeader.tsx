@@ -1,4 +1,5 @@
 import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
+import { VoiceToggle } from "../voice/VoiceOutput";
 import { Avatar } from "./Avatar";
 import { ChatMenu } from "./ChatMenu";
 import { typingLabel } from "./chatNames";
@@ -48,6 +49,7 @@ export function ChatHeader({
           {modeLabel}
         </span>
       )}
+      <VoiceToggle />
       <BehindTheScenesToggle compact />
       {onEdit && onClearChat && (
         <ChatMenu editLabel={config.copy.editMenu} onEdit={onEdit} onClearChat={onClearChat} onWatchDemo={onWatchDemo} />

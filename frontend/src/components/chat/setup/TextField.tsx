@@ -1,3 +1,5 @@
+import { useDictateInto } from "../../voice/useDictateInto";
+
 const INPUT_CLASS =
   "w-full rounded-xl border border-line-strong bg-surface px-4 shadow-[inset_0_1px_2px_rgb(43_34_64/0.04)] text-base text-ink placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none";
 
@@ -13,6 +15,7 @@ export function TextField({
   hint,
   multiline = false,
   rows = 10,
+  voiceLanguage,
 }: {
   id: string;
   label: string;
@@ -24,7 +27,11 @@ export function TextField({
   hint?: string;
   multiline?: boolean;
   rows?: number;
+  /** Adds a mic (voice input) that listens in the language suiting this chat language. */
+  voiceLanguage?: string;
 }) {
+  const mic = useDictateInto({ value, onChange, language: voiceLanguage ?? "english", max });
+  const micButton = voiceLanguage ? mic.button : null;
   const common = {
     id,
     value,
@@ -39,16 +46,20 @@ export function TextField({
         {label}
         {required && <span className="sr-only"> (required)</span>}
       </label>
-      {multiline ? (
-        <textarea
-          {...common}
-          rows={rows}
-          onChange={(e) => onChange(e.target.value)}
-          className={`scroll-thin block resize-y py-3 font-mono text-sm leading-relaxed ${INPUT_CLASS}`}
-        />
-      ) : (
-        <input {...common} onChange={(e) => onChange(e.target.value)} className={`h-11 ${INPUT_CLASS}`} />
-      )}
+      <div className="relative">
+        {multiline ? (
+          <textarea
+            {...common}
+            rows={rows}
+            onChange={(e) => onChange(e.target.value)}
+            className={`scroll-thin block resize-y py-3 font-mono text-sm leading-relaxed ${micButton ? "pr-14" : ""} ${INPUT_CLASS}`}
+          />
+        ) : (
+          <input {...common} onChange={(e) => onChange(e.target.value)} className={`h-11 ${micButton ? "pr-12" : ""} ${INPUT_CLASS}`} />
+        )}
+        {micButton && <div className={`absolute right-1 ${multiline ? "top-2 right-2" : "top-1"}`}>{micButton}</div>}
+      </div>
+      {voiceLanguage && mic.options}
       {(hint || multiline) && (
         <p id={`${id}-hint`} className="mt-1.5 flex justify-between gap-3 text-xs text-faint">
           <span>{hint}</span>

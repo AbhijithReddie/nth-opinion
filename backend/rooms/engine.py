@@ -550,6 +550,13 @@ def _documents_block(room: RoomConfig, documents: list[dict]) -> str:
     return f"The user's documents:\n{docs}\n{DOCUMENT_NOTE}\n{room.document_hint}\n"
 
 
+# Voice input (the browser's speech recognition) can arrive in native script, e.g. Telugu or Devanagari.
+NATIVE_INPUT_NOTE = (
+    "The user may write in a native script (for example from voice input): understand it, but always reply "
+    "in the style above, in Roman script."
+)
+
+
 def language_instruction(room: RoomConfig, language: str) -> str:
     """How personas should write: the room's own wording if it has one, else the shared style guide + the room's note."""
     return room.languages.get(language) or f"{language_style(language)} {room.language_note}".strip()
@@ -971,7 +978,7 @@ The others in the conversation:
 {others}
 
 {_context_block(room, state.get("context", {}))}{_documents_block(room, state.get("documents", []))}
-Language: {language_instruction(room, state["language"])}
+Language: {language_instruction(room, state["language"])} {NATIVE_INPUT_NOTE}
 {f"Current mode - {mode.title}: {mode.instructions}" if mode else ""}
 Format: ONE chat message, at most about {room.max_words} words. Plain text only: no "{me}:" prefix, no \
 quotes around it, no markdown or hashtags. To mention someone write @Name (e.g. @{example}); \

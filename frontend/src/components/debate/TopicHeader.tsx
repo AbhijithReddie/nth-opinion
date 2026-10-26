@@ -1,6 +1,7 @@
 import type { Phase } from "@/lib/types";
 import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
 import { NewDebateButton } from "./NewDebateButton";
+import { VoiceToggle } from "../voice/VoiceOutput";
 
 const STATUS: Record<Exclude<Phase, "idle">, { label: string; className: string; live?: boolean }> = {
   connecting: { label: "Entering the arena", className: "text-muted border-line-strong", live: true },
@@ -41,6 +42,7 @@ export function TopicHeader({
         </h2>
       </div>
       <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+        <VoiceToggle />
         <BehindTheScenesToggle />
         <NewDebateButton onClick={onNewDebate} />
       </div>

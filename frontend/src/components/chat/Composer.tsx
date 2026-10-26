@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MESSAGE_MAX } from "@/config/roomChats";
+import { useDictation } from "@/hooks/useDictation";
+import { useHandsFree, useRecognitionLanguage, useSpeechInputSupported } from "@/hooks/useVoice";
+import { voice } from "@/lib/voice/player";
+import { MicButton, VoiceInputOptions } from "../voice/MicButton";
 import { PollIcon, SendIcon } from "../icons";
 import { TypingIndicator } from "../TypingIndicator";
 
@@ -20,13 +24,36 @@ interface ComposerProps {
   initialText?: string;
   /** Focus the input on mount (after the text was filled in for the user). */
   autoFocus?: boolean;
+  /** The room's chat language: picks the default voice input language. */
+  language?: string;
 }
 
 /** Message input (Enter sends, Shift+Enter for a new line), send button and the room's summary button. */
-export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels, modeSwitch, initialText = "", autoFocus = false }: ComposerProps) {
+export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels, modeSwitch, initialText = "", autoFocus = false, language = "english" }: ComposerProps) {
   const [text, setText] = useState(initialText);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nearLimit = text.length > MESSAGE_MAX - 100;
+
+  // Voice input: the transcript is added after whatever was already typed, live as you speak.
+  // It's only sent by itself in hands-free mode; otherwise the user can edit it first.
+  const micSupported = useSpeechInputSupported();
+  const handsFree = useHandsFree();
+  const [micLang, setMicLang] = useRecognitionLanguage(language);
+  const [micUsed, setMicUsed] = useState(false);
+  const typedBefore = useRef("");
+  const dictation = useDictation(micLang, (spoken, final) => {
+    const full = `${typedBefore.current}${typedBefore.current && spoken ? " " : ""}${spoken}`.slice(0, MESSAGE_MAX);
+    if (final && handsFree && spoken.trim()) {
+      if (onSend(full)) return setText("");
+    }
+    setText(full);
+    requestAnimationFrame(autosize);
+  });
+  function toggleMic() {
+    if (!dictation.listening) typedBefore.current = text.trim();
+    setMicUsed(true);
+    dictation.toggle();
+  }
 
   /** Grow the textarea with its content, up to about 5 lines. */
   function autosize() {
@@ -52,6 +79,8 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
 
   function submit(e?: FormEvent) {
     e?.preventDefault();
+    dictation.stop();
+    voice.stop(); // sending a message stops the room reading aloud
     if (onSend(text)) {
       setText("");
       requestAnimationFrame(autosize);
@@ -119,6 +148,7 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
             </span>
           )}
         </div>
+        {micSupported && <MicButton listening={dictation.listening} level={dictation.level} onClick={toggleMic} />}
         <button
           type="submit"
           disabled={!text.trim()}
@@ -128,6 +158,18 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
           <SendIcon className="size-5" />
         </button>
       </form>
+      {micSupported && (micUsed || dictation.error) && (
+        <VoiceInputOptions
+          lang={micLang}
+          onLang={(lang) => {
+            dictation.stop();
+            setMicLang(lang);
+          }}
+          listening={dictation.listening}
+          error={dictation.error}
+          onClearError={dictation.clearError}
+        />
+      )}
       <p className="mt-1.5 text-center text-[11px] text-faint">{labels.note}</p>
     </div>
   );

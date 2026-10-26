@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useVoice } from "@/hooks/useVoice";
+import type { SpeakRequest } from "@/lib/voice/player";
 import { CheckIcon, CopyIcon, GavelIcon } from "../icons";
+import { PlayButton } from "../voice/VoiceOutput";
 
 /** The judge's written decision memo, with a Copy button. */
-export function DecisionMemo({ memo, topic }: { memo: string; topic: string }) {
+export function DecisionMemo({ memo, topic, speech }: { memo: string; topic: string; speech?: SpeakRequest }) {
   const paragraphs = memo.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  // While the memo is read aloud with captions on, it shows as one block with the current word highlighted.
+  const { speaking, captions } = useVoice();
+  const reading = captions && !!speech && speaking?.key === speech.key ? speaking : null;
 
   return (
     <section
@@ -24,14 +30,31 @@ export function DecisionMemo({ memo, topic }: { memo: string; topic: string }) {
             <p className="font-mono text-[11px] tracking-wider text-faint uppercase">From the judge&apos;s bench</p>
           </div>
         </div>
-        <CopyButton text={`Motion: ${topic}\n\n${memo}`} />
+        <div className="flex items-center gap-1">
+          {speech && <PlayButton request={speech} className="size-8" />}
+          <CopyButton text={`Motion: ${topic}\n\n${memo}`} />
+        </div>
       </header>
       <div className="space-y-4 px-5 py-5 font-[450] text-[15px] leading-7 text-ink sm:px-8 sm:py-7 sm:text-base">
-        {paragraphs.map((p, i) => (
-          <p key={i} className={i === 0 ? "first-letter:float-left first-letter:mr-2 first-letter:font-display first-letter:text-5xl first-letter:leading-[0.9] first-letter:font-semibold first-letter:text-judge-deep" : ""}>
-            {p}
+        {reading ? (
+          <p className="whitespace-pre-wrap">
+            {reading.speech.tokens.map((token, i) =>
+              i === reading.speech.tokenOfWord[reading.word] ? (
+                <span key={i} className="spoken-word">
+                  {token}
+                </span>
+              ) : (
+                token
+              ),
+            )}
           </p>
-        ))}
+        ) : (
+          paragraphs.map((p, i) => (
+            <p key={i} className={i === 0 ? "first-letter:float-left first-letter:mr-2 first-letter:font-display first-letter:text-5xl first-letter:leading-[0.9] first-letter:font-semibold first-letter:text-judge-deep" : ""}>
+              {p}
+            </p>
+          ))
+        )}
       </div>
     </section>
   );

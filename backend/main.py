@@ -6,6 +6,8 @@ Endpoints:
     POST /api/debate                    -> Server-Sent Events stream of the debate
     GET  /api/rooms                     -> list of rooms
     GET  /api/languages                 -> the languages every room supports (languages.py)
+    GET  /api/tts/status                -> which voice engine is available (tts.py)
+    POST /api/tts                       -> speech for one message, when TTS_PROVIDER=gemini (audio/wav)
     POST /api/rooms/{room_id}/message   -> SSE stream of the room's replies
     POST /api/rooms/{room_id}/summary   -> the room's final structured output (JSON)
     POST /api/personas/generate         -> a custom persona from a short description (JSON)
@@ -63,7 +65,7 @@ from typing import Annotated, Literal
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import AfterValidator, AliasChoices, BaseModel, ConfigDict, Field, StringConstraints
 from sse_starlette.sse import EventSourceResponse
 
@@ -71,6 +73,7 @@ from graph import graph, initial_state
 from llm import ModelBusyError, content_text
 import documents as docs
 import languages
+import tts
 from persona_builder import PersonaRefused, generate_persona
 from rooms import ROOMS, SummaryError, get_room, stream_turn, summarize
 from rooms.engine import build_cast
@@ -282,6 +285,7 @@ room_message_limiter = RateLimiter(
 document_limiter = RateLimiter(
     15, "That's 15 documents this hour. Take a break and try again a little later, or paste the key parts instead."
 )
+tts_limiter = RateLimiter(60, "That's a lot of listening for one hour! Voices switch back to your browser's for now.")
 persona_limiter = RateLimiter(
     10, "That's 10 new friends this hour! Give the builder a break and try again a little later."
 )
@@ -643,3 +647,33 @@ async def documents_digest(body: PastedDocument, request: Request):
         return _document_error(exc)
     logger.info("Digested pasted %s: %d characters", body.doc_type, len(text))
     return {"doc_type": body.doc_type, "filename": "Pasted text", "pages": 1, "char_count": len(text), "digest": digest, "text": text}
+
+
+# ---------------------------------------------------------------------------
+# Voices (optional AI text-to-speech; see tts.py). The frontend falls back to
+# browser voices whenever this is off or fails.
+# ---------------------------------------------------------------------------
+class TTSRequest(BaseModel):
+    text: _text(1, 1000)
+    persona_id: Id
+    language: LanguageId = "english"
+
+
+@app.get("/api/tts/status")
+async def tts_status() -> dict:
+    return {"provider": tts.PROVIDER, "available": tts.available()}
+
+
+@app.post("/api/tts")
+async def text_to_speech(body: TTSRequest, request: Request):
+    if not tts.available():
+        return JSONResponse(status_code=404, content={"detail": "AI voices are turned off on this server.", "code": "tts_disabled"})
+    ip = _client_ip(request)
+    if not tts_limiter.allow(ip):
+        return tts_limiter.reject(ip, "tts")
+    try:
+        audio, cached = await tts.synthesize(body.text, body.persona_id, body.language)
+    except tts.TTSError as exc:
+        status = 429 if exc.code == "quota_exhausted" else 502
+        return JSONResponse(status_code=status, content={"detail": str(exc), "code": exc.code})
+    return Response(content=audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=86400", "X-TTS-Cache": "hit" if cached else "miss"})
