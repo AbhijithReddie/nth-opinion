@@ -80,23 +80,61 @@ function isCustomPersona(c: Partial<CustomPersona> | null): c is CustomPersona {
 }
 
 // --- the saved list: localStorage, with an in-memory copy so it works when storage is blocked ---
+// Signed in, the list lives in the account instead: AccountManager connects it with
+// connectAccount(), and every change is pushed to the backend (PUT /api/personas).
 const KEY = "nth-opinion.friends.v1";
 const listeners = new Set<() => void>();
 let current: CustomPersona[] | null = null;
 const EMPTY: CustomPersona[] = [];
+let push: ((list: CustomPersona[]) => void) | null = null;
+
+const notify = () => listeners.forEach((listener) => listener());
+
+/** Signed in: show the account's friends and send every change to `onChange`. */
+export function connectAccount(list: CustomPersona[], onChange: (list: CustomPersona[]) => void) {
+  push = onChange;
+  current = list.filter(isCustomPersona).slice(0, MAX_FRIENDS);
+  notify();
+}
+
+/** Signed out: back to this browser's own list. */
+export function disconnectAccount() {
+  if (!push) return;
+  push = null;
+  current = null;
+  notify();
+}
+
+/** The friends saved in this browser (not the account's), e.g. to offer moving them. */
+export function localPersonas(): CustomPersona[] {
+  const saved = loadJson<CustomPersona[]>(KEY);
+  return Array.isArray(saved) ? saved.filter(isCustomPersona).slice(0, MAX_FRIENDS) : [];
+}
+
+export function clearLocalPersonas() {
+  saveJson(KEY, []);
+}
+
+/** `extra` added to `base`, skipping duplicates (same id, or same name and personality). At most MAX_FRIENDS. */
+export function mergePersonas(base: CustomPersona[], extra: CustomPersona[]): CustomPersona[] {
+  const key = (p: CustomPersona) => `${p.name.trim().toLowerCase()}|${p.personality.trim().toLowerCase()}`;
+  const merged = [...base];
+  for (const p of extra) {
+    if (!merged.some((m) => m.id === p.id || key(m) === key(p))) merged.push(p);
+  }
+  return merged.slice(0, MAX_FRIENDS);
+}
 
 function read(): CustomPersona[] {
-  if (current === null) {
-    const saved = loadJson<CustomPersona[]>(KEY);
-    current = Array.isArray(saved) ? saved.filter(isCustomPersona).slice(0, MAX_FRIENDS) : [];
-  }
+  current ??= localPersonas();
   return current;
 }
 
 function write(next: CustomPersona[]) {
   current = next.slice(0, MAX_FRIENDS);
-  saveJson(KEY, current);
-  listeners.forEach((listener) => listener());
+  if (push) push(current);
+  else saveJson(KEY, current);
+  notify();
 }
 
 /** The saved friends, plus save / remove. Empty during server rendering. */

@@ -7,6 +7,7 @@ Endpoints:
     GET  /api/rooms                     -> list of rooms
     GET  /api/languages                 -> the languages every room supports (languages.py)
     GET  /api/tts/status                -> which voice engine is available (tts.py)
+    /api/me, /api/personas, /api/conversations -> optional accounts (accounts_api.py; needs sign-in)
     POST /api/tts                       -> speech for one message, when TTS_PROVIDER=gemini (audio/wav)
     POST /api/rooms/{room_id}/message   -> SSE stream of the room's replies
     POST /api/rooms/{room_id}/summary   -> the room's final structured output (JSON)
@@ -77,6 +78,8 @@ import tts
 from persona_builder import PersonaRefused, generate_persona
 from rooms import ROOMS, SummaryError, get_room, stream_turn, summarize
 from rooms.engine import build_cast
+# After llm (which loads .env), so DATABASE_URL and SUPABASE_URL are read.
+import accounts_api
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("debate-arena")
@@ -97,8 +100,8 @@ app = FastAPI(title="Nth Opinion API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONTEND_ORIGINS,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -222,6 +225,9 @@ def _room_validation_message(fields: set[str]) -> str:
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Return a short readable message instead of Pydantic's raw error list."""
+    if accounts_api.is_account_path(request.url.path, request.method):
+        fields = {str(part) for err in exc.errors() for part in err.get("loc", ())}
+        return JSONResponse(status_code=422, content={"detail": accounts_api.validation_message(fields), "code": "invalid"})
     if request.url.path.startswith("/api/documents"):
         fields = {str(part) for err in exc.errors() for part in err.get("loc", ())}
         message = (
@@ -677,3 +683,12 @@ async def text_to_speech(body: TTSRequest, request: Request):
         status = 429 if exc.code == "quota_exhausted" else 502
         return JSONResponse(status_code=status, content={"detail": str(exc), "code": exc.code})
     return Response(content=audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=86400", "X-TTS-Cache": "hit" if cached else "miss"})
+
+
+# ---------------------------------------------------------------------------
+# Optional accounts (Supabase sign-in; see accounts_api.py). Off without
+# DATABASE_URL and SUPABASE_URL; guests never need them.
+# ---------------------------------------------------------------------------
+account_limiter = RateLimiter(300, "That's a lot of saving for one hour. Try again a little later.")
+app.add_exception_handler(accounts_api.AccountError, accounts_api.account_error_handler)
+app.include_router(accounts_api.build_router(account_limiter))

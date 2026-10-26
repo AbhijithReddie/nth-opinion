@@ -7,6 +7,8 @@ import { getRoom } from "@/config/rooms";
 import { useBehindTheScenes, useWideScreen } from "@/hooks/useBehindTheScenes";
 import { useReadAloud } from "@/hooks/useReadAloud";
 import { useCallSession } from "@/hooks/useCallSession";
+import { useConversationSave } from "@/hooks/useConversationSave";
+import { SaveSafetyDialog } from "../account/SaveConversation";
 import { sceneFor } from "@/lib/call/scenes";
 import { CallView } from "../call/CallView";
 import { JoinCall } from "../call/JoinCall";
@@ -93,6 +95,9 @@ export function ChatScreen({
     return meta ? <Avatar persona={meta} /> : null;
   };
 
+  // Signed in: "Save conversation" (off by default), saved after each turn.
+  const save = useConversationSave({ roomId: config.roomId, setup, items: chat.items, replying: chat.replying, safety: chat.safety, enabled: !replayBar });
+
   // Chat or Call view of the same conversation.
   const [view, setView] = useState<"chat" | "call">("chat");
   const call = useCallSession();
@@ -165,9 +170,11 @@ export function ChatScreen({
             onWatchDemo={onWatchDemo}
             view={view}
             onView={setView}
+            save={save}
             callName={scene.name}
           />
           {chat.safety && <SafetyBanner text={chat.safety} onDismiss={chat.dismissSafety} />}
+          {save.askSafety && <SaveSafetyDialog onAnswer={save.answerSafety} />}
 
           {inCall ? (
             call.joined ? (

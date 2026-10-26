@@ -1,5 +1,7 @@
 import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
 import { ChatBubbleIcon, PhoneIcon } from "../icons";
+import type { ConversationSave } from "@/hooks/useConversationSave";
+import { SaveStatusPill } from "../account/SaveConversation";
 import { VoiceToggle } from "../voice/VoiceOutput";
 import { Avatar } from "./Avatar";
 import { ChatMenu } from "./ChatMenu";
@@ -16,6 +18,7 @@ export function ChatHeader({
   view = "chat",
   onView,
   callName = "Call",
+  save,
 }: {
   typing: string[];
   /** Current mode id, for rooms with modes. */
@@ -28,6 +31,8 @@ export function ChatHeader({
   view?: "chat" | "call";
   onView?: (view: "chat" | "call") => void;
   callName?: string;
+  /** Signed-in users: the "Save conversation" toggle (in the menu) and its status. */
+  save?: ConversationSave;
 }) {
   const { config, setup, persona, nameOf } = useRoom();
   const modeLabel = config.modes?.find((m) => m.id === mode)?.label;
@@ -57,6 +62,7 @@ export function ChatHeader({
           {modeLabel}
         </span>
       )}
+      {save?.available && save.on && <SaveStatusPill status={save.status} />}
       {onView && <ViewSwitch view={view} onView={onView} callName={callName} />}
       {view === "chat" && (
         <>
@@ -65,7 +71,13 @@ export function ChatHeader({
         </>
       )}
       {onEdit && onClearChat && (
-        <ChatMenu editLabel={config.copy.editMenu} onEdit={onEdit} onClearChat={onClearChat} onWatchDemo={onWatchDemo} />
+        <ChatMenu
+          editLabel={config.copy.editMenu}
+          onEdit={onEdit}
+          onClearChat={onClearChat}
+          onWatchDemo={onWatchDemo}
+          save={save?.available ? { on: save.on, onChange: save.setOn } : undefined}
+        />
       )}
     </header>
   );

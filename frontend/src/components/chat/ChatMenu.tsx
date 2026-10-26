@@ -10,11 +10,14 @@ export function ChatMenu({
   onEdit,
   onClearChat,
   onWatchDemo,
+  save,
 }: {
   editLabel: string;
   onEdit: () => void;
   onClearChat: () => void;
   onWatchDemo?: () => void;
+  /** Signed-in users only: save this conversation to their account. */
+  save?: { on: boolean; onChange: (on: boolean) => void };
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -72,6 +75,16 @@ export function ChatMenu({
               <PencilIcon className="size-4 text-muted" /> {editLabel}
             </button>
           </li>
+          {save && (
+            <li role="none">
+              <button type="button" role="menuitemcheckbox" aria-checked={save.on} onClick={() => choose(() => save.onChange(!save.on))} className={itemClass}>
+                <span aria-hidden className={`grid size-4 place-items-center rounded border text-[10px] ${save.on ? "border-primary bg-primary text-white" : "border-line-strong"}`}>
+                  {save.on ? "✓" : ""}
+                </span>
+                Save conversation
+              </button>
+            </li>
+          )}
           {onWatchDemo && (
             <li role="none">
               <button type="button" role="menuitem" onClick={() => choose(onWatchDemo)} className={itemClass}>

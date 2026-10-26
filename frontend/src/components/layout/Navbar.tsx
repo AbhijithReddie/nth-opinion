@@ -6,6 +6,7 @@ import { GITHUB_URL } from "@/config/site";
 import { LogoMark } from "../brand/LogoMark";
 import { Wordmark } from "../brand/Wordmark";
 import { GitHubIcon } from "../icons";
+import { AccountMenu } from "../account/AccountMenu";
 import { MobileMenu } from "./MobileMenu";
 import { RoomsMenu } from "./RoomsMenu";
 
@@ -50,7 +51,10 @@ export function Navbar() {
           </a>
         </nav>
 
-        <MobileMenu pathname={pathname} />
+        <div className="flex items-center gap-2">
+          <AccountMenu />
+          <MobileMenu pathname={pathname} />
+        </div>
       </div>
     </header>
   );

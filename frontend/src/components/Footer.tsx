@@ -30,6 +30,7 @@ export function Footer() {
             { href: "/", label: "Home" },
             { href: "/about", label: "About" },
             { href: "/how-we-test", label: "How we test" },
+            { href: "/privacy", label: "Privacy" },
           ]}
         >
           <li>

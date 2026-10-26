@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Figtree, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { PwaManager } from "@/components/pwa/PwaManager";
+import { AccountManager } from "@/components/account/AccountManager";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/config/site";
 import "./globals.css";
 
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Navbar />
         {children}
         <PwaManager />
+        <AccountManager />
       </body>
     </html>
   );

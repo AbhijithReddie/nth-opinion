@@ -35,6 +35,10 @@ backend/
   agent_trace.py      "Behind the scenes" trace events (node starts/ends, decisions, safety mode)
   languages.py        the shared language registry (GET /api/languages)
   tts.py              optional AI voices for "Read replies aloud" (POST /api/tts)
+  auth.py             verifies Supabase access tokens (JWKS, or a legacy shared secret)
+  accounts.py         account data: profiles, synced friends, saved conversations (SQL, per user)
+  accounts_api.py     the account endpoints (/api/me, /api/personas, /api/conversations)
+  db/                 connection pool, SQL migrations (db/migrations/) and their runner
   persona_builder.py  "Build your own friend": a custom persona from a short description
   documents.py        document uploads: type detection, PDF/DOCX/TXT extraction, the digest
   samples/            made-up sample documents (resume, job description, pitch deck) for replays and evals
@@ -1035,6 +1039,80 @@ conversation (the same state), so switching never loses anything.
 - **Replays and sharing:** demo replays play in call mode too (no AI quota). When
   a room's results arrive during a call, "See them in chat" opens the result
   card, where sharing and the PDF report work as before.
+
+## Optional accounts (Supabase)
+
+Signing in is optional; guests keep everything in their browser exactly as before.
+Signed in, people can save conversations (a "Save conversation" toggle in each
+room's menu, off by default), resume them from **My conversations**, keep their
+own friends across devices, and export or delete everything from **Settings**.
+The plain-English summary is the **Privacy** page (`/privacy`).
+
+**How it fits together**
+
+- The frontend uses Supabase **only to sign in** (email magic links, via
+  `@supabase/ssr`), and sends the user's access token to our backend as
+  `Authorization: Bearer <token>`.
+- The backend is the only thing that touches the database (`DATABASE_URL`, a
+  small psycopg 3 pool). It verifies each token with Supabase's JWKS
+  (`{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, cached), checking the signature,
+  expiry, issuer and audience, and takes the user id from the token only. Every
+  query filters by that id. It never needs a Supabase secret or service_role key.
+- Tables (`backend/db/migrations/001_accounts.sql`): `profiles`, `custom_personas`
+  and `conversations`, keyed by the Supabase user id, with Row Level Security on
+  every table (a user can only reach their own rows) as defence in depth.
+- Never stored: uploaded documents or their digests, camera, voice audio. Saved
+  setups keep only the people, language and room details; the backend strips
+  document fields again. Conversations where the support message appeared are
+  only saved if the user says yes (the default is no).
+- Limits: 50 saved conversations per user (a friendly message when full), 200
+  messages and 200 KB per conversation, 12 friends; 300 account requests per user
+  per hour.
+- Built for what's next: `profiles.memory_enabled` (off) is ready for memory
+  (10b), and conversations have stable ids for the decision journal (10c) to
+  reference. New tables are just new numbered migration files.
+
+**Setting it up**
+
+1. Create a Supabase project. In **Authentication > URL Configuration**, set the
+   Site URL to your frontend (e.g. `https://nth-opinion.vercel.app`) and add
+   `http://localhost:3000/auth/callback` and `https://<your-site>/auth/callback`
+   to the redirect URLs. Email magic links work with the default email settings
+   (Supabase's built-in email is rate-limited; add your own SMTP for real use).
+2. Backend `.env` (see `backend/.env.example`):
+   - `SUPABASE_URL`: `https://<project>.supabase.co` (Project Settings > API).
+   - `DATABASE_URL`: the **Session pooler** connection string (Connect > Session
+     pooler), with your database password filled in.
+   - `SUPABASE_JWT_SECRET`: only for older projects still on the legacy shared JWT
+     secret. New projects use signing keys and the JWKS, and need nothing here.
+3. Install the new backend packages and create the tables (from `backend/`, with
+   the virtual environment active):
+
+   ```
+   pip install -r requirements.txt
+   python -m db.migrate --dry-run   # lists what would run
+   python -m db.migrate             # applies pending migrations, records them in schema_migrations
+   ```
+
+   It's safe to run again: only new migration files are applied.
+4. Frontend `.env.local` (see `frontend/.env.example`):
+   - `NEXT_PUBLIC_SUPABASE_URL`: the same project URL.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: the project's **publishable** key
+     (`sb_publishable_...`). It's used wherever Supabase expects the anon key and
+     is safe in the browser. Never put a secret key here.
+
+   Then `npm install` (adds `@supabase/supabase-js` and `@supabase/ssr`).
+5. On Render and Vercel, add the same variables to each service's environment.
+
+If `DATABASE_URL` or `SUPABASE_URL` isn't set, the account endpoints answer
+"Accounts aren't available right now" and everything else works as before. If
+the frontend variables aren't set, the Sign in button doesn't appear.
+
+**Deleting an account**: Settings > Delete my account removes all the user's rows
+from our tables and signs them out. The sign-in identity itself (their email in
+Supabase Auth) is removed from the Supabase dashboard (Authentication > Users >
+Delete user), which also deletes any of our rows left for that user (the tables
+cascade on delete).
 
 ## Installable app (PWA)
 
