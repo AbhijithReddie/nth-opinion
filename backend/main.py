@@ -31,7 +31,7 @@ SSE events sent by /api/debate (each `data:` field is JSON):
 
 SSE events sent by /api/rooms/{room_id}/message:
     typing      {"friend_id"}
-    message     {"id", "friend_id", "text", "reply_to", "mentions"}
+    message     {"id", "friend_id", "text", "reply_to", "mentions", "emotion"}
     reaction    {"friend_id", "message_id", "emoji"}
     safety      {"helpline_text"}
     mode        {"mode"}                       only rooms with modes

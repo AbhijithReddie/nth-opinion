@@ -9,14 +9,17 @@ import type { AvatarLook, Persona } from "@/config/personas";
 
 const SIZES = { xs: "size-6", sm: "size-8", md: "size-10", lg: "size-14", xl: "size-20" };
 
-const INK = "#2B2240";
-const BLUSH = "#E07A66";
+export const INK = "#2B2240";
+export const BLUSH = "#E07A66";
 const SKIN = { 1: "#F3D3B6", 2: "#E3B18A", 3: "#C88F64", 4: "#A26C46", 5: "#764A2F" } as const;
 const HAIR = { black: "#2B2026", brown: "#5B3A29", grey: "#B7AFC2" } as const;
 
 type Look = AvatarLook;
 type HairStyle = NonNullable<Look["hair"]>;
-type Mood = NonNullable<Look["mood"]>;
+export type Mood = NonNullable<Look["mood"]>;
+/** Draws the eyes, brows and mouth (call mode swaps in an animated face). */
+export type FaceRenderer = (mood: Mood, brow: string) => React.ReactNode;
+const staticFace: FaceRenderer = (mood, brow) => <Face mood={mood} brow={brow} />;
 
 /** A persona's round avatar. Decorative by default (the name is always shown next to it); pass `label` to announce it. */
 export function Avatar({
@@ -45,14 +48,19 @@ export function PersonaFace({ look, color, className, label }: { look: Look; col
       <g clipPath={`url(#${clipId})`}>
         <rect width="64" height="64" fill="#FFFFFF" />
         <rect width="64" height="64" fill={color} fillOpacity={0.15} />
-        {look.kind === "bot" ? <Bot look={look} color={color} /> : <Person look={look} color={color} />}
+        <Figure look={look} color={color} />
       </g>
       <circle cx="32" cy="32" r="31" fill="none" stroke={color} strokeOpacity={0.45} strokeWidth="2" />
     </svg>
   );
 }
 
-function Person({ look, color }: { look: Look; color: string }) {
+/** The whole figure (person or bot) inside the 64x64 frame; `face` replaces the static face. */
+export function Figure({ look, color, face = staticFace }: { look: Look; color: string; face?: FaceRenderer }) {
+  return look.kind === "bot" ? <Bot look={look} color={color} face={face} /> : <Person look={look} color={color} face={face} />;
+}
+
+function Person({ look, color, face }: { look: Look; color: string; face: FaceRenderer }) {
   const skin = SKIN[look.skin ?? 3];
   const hair = HAIR[look.hairColor ?? "black"];
   const style = look.hair ?? "short";
@@ -89,7 +97,7 @@ function Person({ look, color }: { look: Look; color: string }) {
         />
       )}
       <HairFront style={style} fill={hair} />
-      <Face mood={look.mood ?? "smile"} brow={hair} />
+      {face(look.mood ?? "smile", hair)}
       {extras.has("moustache") && (
         <path d="M27.8 34.4c1.8-1.4 3.2-1 4.2-.3 1-.7 2.4-1.1 4.2.3-1.8 1.1-3.2.8-4.2.4-1 .4-2.4.7-4.2-.4Z" fill={hair} />
       )}
@@ -148,7 +156,7 @@ function Person({ look, color }: { look: Look; color: string }) {
   );
 }
 
-function Bot({ look, color }: { look: Look; color: string }) {
+function Bot({ look, color, face }: { look: Look; color: string; face: FaceRenderer }) {
   const judge = look.extras?.includes("judge-cap");
   return (
     <>
@@ -173,7 +181,7 @@ function Bot({ look, color }: { look: Look; color: string }) {
       <rect x="15" y="15.5" width="34" height="27.5" rx="10" fill="#FFFFFF" stroke={INK} strokeWidth="1.6" />
       <rect x="19.5" y="20" width="25" height="18.5" rx="7" fill={color} fillOpacity={0.16} />
       <g transform="translate(0 -1.8)">
-        <Face mood={look.mood ?? "smile"} brow={INK} />
+        {face(look.mood ?? "smile", INK)}
       </g>
     </>
   );

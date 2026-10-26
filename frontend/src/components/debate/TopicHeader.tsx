@@ -2,6 +2,7 @@ import type { Phase } from "@/lib/types";
 import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
 import { NewDebateButton } from "./NewDebateButton";
 import { VoiceToggle } from "../voice/VoiceOutput";
+import { ViewSwitch } from "../chat/ChatHeader";
 
 const STATUS: Record<Exclude<Phase, "idle">, { label: string; className: string; live?: boolean }> = {
   connecting: { label: "Entering the arena", className: "text-muted border-line-strong", live: true },
@@ -17,11 +18,16 @@ export function TopicHeader({
   rounds,
   phase,
   onNewDebate,
+  view,
+  onView,
 }: {
   topic: string;
   rounds: number;
   phase: Exclude<Phase, "idle">;
   onNewDebate: () => void;
+  /** Arena or Stage mode. */
+  view?: "chat" | "call";
+  onView?: (view: "chat" | "call") => void;
 }) {
   const status = STATUS[phase];
   return (
@@ -42,8 +48,13 @@ export function TopicHeader({
         </h2>
       </div>
       <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
-        <VoiceToggle />
-        <BehindTheScenesToggle />
+        {onView && <ViewSwitch view={view ?? "chat"} onView={onView} chatName="Arena" callName="Stage mode" />}
+        {view !== "call" && (
+          <>
+            <VoiceToggle />
+            <BehindTheScenesToggle />
+          </>
+        )}
         <NewDebateButton onClick={onNewDebate} />
       </div>
     </header>

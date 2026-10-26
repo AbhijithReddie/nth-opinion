@@ -35,6 +35,7 @@ class FakeLLM:
     def __init__(self):
         self.prompts: list[tuple[str | None, str, str]] = []  # (run_name, system, human)
         self.director_script: list = []
+        self.speaker_text = "A short test reply."  # what personas write
 
     async def __call__(self, messages, *, temperature, schema=None, model=None, run_name=None):
         self.prompts.append((run_name, messages[0].content, messages[-1].content))
@@ -49,7 +50,7 @@ class FakeLLM:
             return schema(pro=s, con=s, winner="tie", memo="Even.")
         if schema is not None:
             raise AssertionError(f"FakeLLM has no answer for {schema}")
-        return AIMessage(content="A short test reply.")
+        return AIMessage(content=self.speaker_text)
 
     def system_prompts(self, run_name: str) -> list[str]:
         return [system for name, system, _ in self.prompts if name == run_name]

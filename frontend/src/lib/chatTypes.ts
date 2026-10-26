@@ -44,7 +44,13 @@ export interface ChatMessage {
   reactions: ChatReaction[];
   /** Unix time in ms. */
   ts: number;
+  /** The speaker's mood (call mode's avatar expression); missing in older chats and replays. */
+  emotion?: Emotion;
 }
+
+/** Moods a persona can show in call mode (backend/rooms/engine.py EMOTIONS). */
+export const EMOTIONS = ["happy", "excited", "thoughtful", "annoyed", "concerned", "neutral"] as const;
+export type Emotion = (typeof EMOTIONS)[number];
 
 /** Group Chat summary: "Ask the group to vote". */
 export interface Poll {
@@ -143,7 +149,7 @@ export type ChatItem = ChatMessage | SummaryItem | ModeItem;
 export type RoomEvent =
   | TraceEvent
   | { type: "typing"; friend_id: string }
-  | { type: "message"; id: string; friend_id: string; text: string; reply_to: string | null; mentions: string[] }
+  | { type: "message"; id: string; friend_id: string; text: string; reply_to: string | null; mentions: string[]; emotion?: Emotion }
   | { type: "reaction"; friend_id: string; message_id: string; emoji: string }
   | { type: "safety"; helpline_text: string }
   | { type: "mode"; mode: string }

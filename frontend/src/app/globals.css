@@ -111,6 +111,10 @@
   --animate-shimmer: shimmer 1.8s linear infinite;
   --animate-pop: pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
   --animate-float: float 6s ease-in-out infinite;
+  /* Call mode */
+  --animate-reaction-up: reaction-up 1.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  --animate-ring: ring 1.2s ease-in-out infinite;
+  --animate-ripple: ripple 1.8s ease-out infinite;
 }
 
 @keyframes fade-up {
@@ -335,5 +339,71 @@ body {
     box-shadow: none;
     text-decoration: underline 2px var(--color-judge-deep);
     text-underline-offset: 3px;
+  }
+}
+
+/* ---- Call mode -------------------------------------------------------------
+   Reactions float up from a tile; the join screen's phone rings and ripples;
+   the speaking tile's equaliser bounces. All pause under reduced motion (the
+   global rule above), and the components avoid relying on them there. */
+@keyframes reaction-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-70px) scale(1);
+  }
+}
+@keyframes ring {
+  0%,
+  50%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(-12deg);
+  }
+  20%,
+  40% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes ripple {
+  from {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+.equaliser span {
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: equaliser 0.9s ease-in-out infinite;
+  transform-origin: bottom;
+}
+.equaliser span:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.equaliser span:nth-child(3) {
+  animation-delay: -0.6s;
+}
+@keyframes equaliser {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
   }
 }

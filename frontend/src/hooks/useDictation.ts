@@ -20,6 +20,7 @@ export function useDictation(lang: string, onText: (text: string, final: boolean
   });
 
   const start = useCallback(() => {
+    if (session.current) return; // already listening
     voice.stop(); // never talk over the user
     setError(null);
     setListening(true);
@@ -41,5 +42,5 @@ export function useDictation(lang: string, onText: (text: string, final: boolean
   // Stop listening when the box goes away.
   useEffect(() => () => session.current?.stop(), []);
 
-  return { listening, level, error, toggle, stop, clearError: () => setError(null) };
+  return { listening, level, error, start, toggle, stop, clearError: () => setError(null) };
 }

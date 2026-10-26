@@ -6,6 +6,10 @@ import { resolvePersona } from "@/config/roomChats";
 import { getRoom } from "@/config/rooms";
 import { useBehindTheScenes, useWideScreen } from "@/hooks/useBehindTheScenes";
 import { useReadAloud } from "@/hooks/useReadAloud";
+import { useCallSession } from "@/hooks/useCallSession";
+import { sceneFor } from "@/lib/call/scenes";
+import { CallView } from "../call/CallView";
+import { JoinCall } from "../call/JoinCall";
 import type { RoomChatController } from "@/hooks/useRoomChat";
 import type { RoomSetup } from "@/lib/chatTypes";
 import { offersReplay } from "@/lib/replay";
@@ -29,6 +33,8 @@ import { SafetyBanner } from "./SafetyBanner";
  * `replayBar` turns this into a replay: the controls replace the composer and the chat menu.
  * With "Behind the scenes" on, the agents' live trace sits beside the chat (a docked
  * sheet above the composer on phones), so the conversation stays usable.
+ * The header's Chat / Call switch shows the same conversation as a group video call
+ * (components/call/CallView.tsx); both views share `chat`, so nothing is lost.
  */
 export function ChatScreen({
   chat,
@@ -74,7 +80,7 @@ export function ChatScreen({
   const readable = useMemo<SpeakRequest[]>(() => {
     const requests: SpeakRequest[] = chat.items.flatMap((item) =>
       item.kind === "message" && item.sender !== "user"
-        ? [{ key: item.id, speakerId: item.sender, speakerName: trace.nameOf(item.sender), text: item.text, language: setup.language }]
+        ? [{ key: item.id, speakerId: item.sender, speakerName: trace.nameOf(item.sender), text: item.text, language: setup.language, emotion: item.emotion }]
         : [],
     );
     if (chat.safety) requests.push({ key: `safety:${chat.safety}`, speakerId: "system", speakerName: "Support", text: chat.safety });
@@ -86,6 +92,36 @@ export function ChatScreen({
     const meta = resolvePersona(config, setup, id);
     return meta ? <Avatar persona={meta} /> : null;
   };
+
+  // Chat or Call view of the same conversation.
+  const [view, setView] = useState<"chat" | "call">("chat");
+  const call = useCallSession();
+  const inCall = view === "call";
+  const scene = sceneFor(config.roomId);
+  const everyone = [...setup.participants, ...(setup.guests ?? [])];
+  const callControls = (
+    <>
+      {!replayBar && (
+        <button
+          type="button"
+          onClick={chat.requestSummary}
+          disabled={!chat.hasUserMessage || chat.summarizing}
+          className="inline-flex h-11 items-center rounded-full border border-primary/30 bg-primary-soft px-3.5 text-sm font-semibold text-primary-deep transition hover:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none disabled:opacity-40"
+        >
+          {chat.summarizing ? config.summary.loading : config.summary.button}
+        </button>
+      )}
+      {nextMode && !replayBar && (
+        <button
+          type="button"
+          onClick={() => chat.switchMode(nextMode.id)}
+          className="inline-flex h-11 items-center rounded-full border border-line-strong bg-surface px-3.5 text-sm font-semibold text-ink transition hover:bg-sand focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
+        >
+          {nextMode.switchLabel}
+        </button>
+      )}
+    </>
+  );
 
   const slowNotice = slowNoticeKind(chat.slow, !!onWatchDemo);
   const errorActions = (
@@ -119,7 +155,7 @@ export function ChatScreen({
       }}
     >
       <div className={behindTheScenes && wide ? "mx-auto flex w-full max-w-6xl" : "contents"}>
-        <div className="mx-auto flex h-[calc(100dvh-65px)] w-full max-w-3xl min-w-0 flex-col overflow-hidden chat-paper sm:border-x sm:border-line sm:shadow-soft">
+        <div className={`mx-auto flex h-[calc(100dvh-65px)] w-full min-w-0 flex-col overflow-hidden chat-paper sm:border-x sm:border-line sm:shadow-soft ${inCall ? "max-w-6xl" : "max-w-3xl"}`}>
           <ChatHeader
             typing={chat.typing}
             mode={chat.mode}
@@ -127,9 +163,45 @@ export function ChatScreen({
             onEdit={replayBar ? undefined : chat.editSetup}
             onClearChat={replayBar ? undefined : clearChat}
             onWatchDemo={onWatchDemo}
+            view={view}
+            onView={setView}
+            callName={scene.name}
           />
           {chat.safety && <SafetyBanner text={chat.safety} onDismiss={chat.dismissSafety} />}
 
+          {inCall ? (
+            call.joined ? (
+              <CallView
+                chat={chat}
+                setup={setup}
+                persona={trace.persona}
+                nameOf={trace.nameOf}
+                replay={!!replayBar}
+                camera={{ stream: call.camera, error: call.cameraError, onToggle: call.toggleCamera, onClearError: call.clearCameraError }}
+                behindTheScenes={{ on: behindTheScenes, onToggle: () => setBehindTheScenes(!behindTheScenes) }}
+                extraControls={callControls}
+                traceSheet={behindTheScenes && !wide ? <TraceSheet {...trace} /> : null}
+                onSwitchToChat={() => setView("chat")}
+                onEnd={() => {
+                  call.end();
+                  setView("chat");
+                }}
+              />
+            ) : (
+              <JoinCall
+                title={setup.title}
+                modeName={scene.name}
+                people={everyone.flatMap((p) => {
+                  const meta = trace.persona(p.id);
+                  return meta ? [{ ...meta, name: p.name }] : [];
+                })}
+                onJoin={call.join}
+                onCancel={() => setView("chat")}
+                background={scene.background}
+              />
+            )
+          ) : (
+          <>
           <MessageList items={chat.items} typing={chat.typing} onTryExample={(text) => setDraft((d) => ({ text, key: d.key + 1 }))} />
 
           {chat.error &&
@@ -147,7 +219,7 @@ export function ChatScreen({
           {behindTheScenes && !wide && <TraceSheet {...trace} />}
           <CaptionsBar avatar={speakerAvatar} />
 
-          {replayBar ?? (
+          {!replayBar && (
             <Composer
               key={draft.key}
               initialText={draft.text}
@@ -167,6 +239,10 @@ export function ChatScreen({
               modeSwitch={nextMode && { label: nextMode.switchLabel, onClick: () => chat.switchMode(nextMode.id) }}
             />
           )}
+          </>
+          )}
+          {/* One place for both views, so switching never remounts it (it holds the pause state). */}
+          {replayBar}
         </div>
         {behindTheScenes && wide && (
           <aside className="h-[calc(100dvh-65px)] w-88 shrink-0 overflow-y-auto border-r border-line bg-surface">

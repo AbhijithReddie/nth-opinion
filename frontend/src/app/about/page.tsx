@@ -93,6 +93,16 @@ export default function AboutPage() {
               At the end of every room, download a PDF report made in your browser: scores, feedback, checklists and
               quizzes. Reports contain the room&apos;s results only, never your uploaded documents.
             </Explainer>
+            <Explainer title="Voice and captions">
+              Talk instead of typing with the mic (your browser&apos;s speech service; in Chrome that&apos;s Google), and
+              have replies read aloud, each persona in their own voice, with the words highlighted as they&apos;re
+              spoken.
+            </Explainer>
+            <Explainer title="Call mode">
+              Switch any room to a group video call (the Debate Arena calls it Stage mode): illustrated avatars that
+              blink, think, react and lip-sync as they talk, in a room-themed scene. Your camera self-view is optional,
+              shows only in your own tile and is never recorded or sent anywhere.
+            </Explainer>
           </div>
         </section>
 

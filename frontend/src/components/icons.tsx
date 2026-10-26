@@ -296,3 +296,45 @@ export function CaptionsIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function PhoneIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M5 4h3.5l1.8 4.6-2.3 1.5a11 11 0 0 0 5.9 5.9l1.5-2.3L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z" />
+    </svg>
+  );
+}
+
+export function PhoneOffIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M3.5 13.8c4.6-4.4 12.4-4.4 17 0l-1.9 2.6-3.6-1.2v-2.4a12 12 0 0 0-6 0v2.4l-3.6 1.2Z" />
+    </svg>
+  );
+}
+
+export function CameraIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <rect x="3" y="6.5" width="13" height="11" rx="2.5" />
+      <path d="m16 10.5 5-3v9l-5-3Z" />
+    </svg>
+  );
+}
+
+export function ChatBubbleIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-4.5 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+    </svg>
+  );
+}
+
+export function HandsFreeIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <rect x="9" y="3" width="6" height="10" rx="3" />
+      <path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4M4 4l2 2M20 4l-2 2" />
+    </svg>
+  );
+}

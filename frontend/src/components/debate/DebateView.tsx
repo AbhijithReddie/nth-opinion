@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DEBATERS } from "@/config/personas";
+import { useBehindTheScenes } from "@/hooks/useBehindTheScenes";
+import { useCallSession } from "@/hooks/useCallSession";
+import { sceneFor } from "@/lib/call/scenes";
+import { JoinCall } from "../call/JoinCall";
+import { StageView } from "../call/StageView";
 import { hashOf } from "@/config/voices";
 import { useReadAloud } from "@/hooks/useReadAloud";
 import type { SpeakRequest } from "@/lib/voice/player";
@@ -63,13 +69,19 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
   const speech = useMemo(() => debateSpeech(turns, verdict?.memo, state.language), [turns, verdict, state.language]);
   useReadAloud(speech);
 
-  // Bring the arena into view when a debate starts, and the verdict when it lands.
+  // Arena or Stage mode (a video-call view of the same debate).
+  const [view, setView] = useState<"chat" | "call">("chat");
+  const stage = useCallSession();
+  const [behindTheScenes, setBehindTheScenes] = useBehindTheScenes();
+  const onStage = view === "call" && stage.joined;
+
+  // Bring the arena into view when a debate starts, and the verdict when it lands (not over the stage).
   useEffect(() => {
     if (phase === "connecting") sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [phase]);
   useEffect(() => {
-    if (verdict) verdictRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [verdict]);
+    if (verdict && !onStage) verdictRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [verdict, onStage]);
 
   if (phase === "idle") return null;
 
@@ -93,10 +105,27 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
 
   return (
     <section ref={sectionRef} aria-label="Debate" className="scroll-mt-24 space-y-6">
-      <TopicHeader topic={topic} rounds={rounds} phase={phase} onNewDebate={onNewDebate} />
+      <TopicHeader topic={topic} rounds={rounds} phase={phase} onNewDebate={onNewDebate} view={view} onView={setView} />
+
+      {view === "call" &&
+        (stage.joined ? (
+          <StageView
+            state={state}
+            behindTheScenes={{ on: behindTheScenes, onToggle: () => setBehindTheScenes(!behindTheScenes) }}
+            onSwitch={() => setView("chat")}
+            onEnd={() => {
+              stage.end();
+              setView("chat");
+            }}
+          />
+        ) : (
+          <div className="flex h-[min(78dvh,40rem)] overflow-hidden rounded-3xl border border-line shadow-soft">
+            <JoinCall title={topic} modeName="Stage mode" people={DEBATERS} onJoin={stage.join} onCancel={() => setView("chat")} background={sceneFor("debate").background} />
+          </div>
+        ))}
 
       {/* Column labels; on phones the cards stack in speaking order instead. */}
-      {roundCount > 0 && (
+      {view === "chat" && roundCount > 0 && (
         <div className="hidden grid-cols-2 gap-5 md:grid" aria-hidden>
           {(["pro", "con"] as Speaker[]).map((s) => (
             <div key={s} className="flex items-center gap-3 px-1">
@@ -108,7 +137,7 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
         </div>
       )}
 
-      <div className="space-y-5">
+      <div className={`space-y-5 ${view === "call" ? "hidden" : ""}`}>
         {Array.from({ length: roundCount }, (_, i) => i + 1).map((round) => (
           <div key={round} className="grid items-start gap-3 md:grid-cols-2 md:gap-5">
             {cell("pro", round)}
@@ -117,7 +146,7 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
         ))}
       </div>
 
-      {phase === "judging" && <JudgeDeliberating />}
+      {phase === "judging" && view === "chat" && <JudgeDeliberating />}
 
       {verdict && (
         <div ref={verdictRef} className="scroll-mt-24 space-y-6">
@@ -140,7 +169,7 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
         </ErrorBanner>
       )}
 
-      <CaptionsBar avatar={sideBadge} className="sticky bottom-0 z-20 -mx-1 rounded-2xl border shadow-lift" />
+      {!onStage && <CaptionsBar avatar={sideBadge} className="sticky bottom-0 z-20 -mx-1 rounded-2xl border shadow-lift" />}
 
       {phase === "done" && (
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

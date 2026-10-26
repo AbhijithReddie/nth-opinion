@@ -477,6 +477,19 @@ def find_mentions(text: str, participants: list[dict], author: str | None = None
     return mentions
 
 
+# Call mode: each message carries the speaker's mood, chosen in the same LLM call that writes it
+# (a leading tag like "[happy]", removed before anyone sees the text). Missing tag -> "neutral".
+EMOTIONS = ("happy", "excited", "thoughtful", "annoyed", "concerned", "neutral")
+_EMOTION_TAG = re.compile(r"\[\s*(" + "|".join(EMOTIONS) + r")\s*\]", re.IGNORECASE)
+
+
+def split_emotion(text: str) -> tuple[str, str]:
+    """(emotion, text without the tag). The first tag wins; stray tags anywhere are dropped."""
+    found = _EMOTION_TAG.search(text)
+    emotion = found.group(1).lower() if found else "neutral"
+    return emotion, re.sub(r"[ \t]{2,}", " ", _EMOTION_TAG.sub("", text)).strip()
+
+
 def _clean_reply(text: str, max_words: int, names: list[str]) -> str:
     """Tidy a persona's reply: no "Name:" prefix, no wrapping quotes, a hard length cap.
 
@@ -983,6 +996,7 @@ Language: {language_instruction(room, state["language"])} {NATIVE_INPUT_NOTE}
 Format: ONE chat message, at most about {room.max_words} words. Plain text only: no "{me}:" prefix, no \
 quotes around it, no markdown or hashtags. To mention someone write @Name (e.g. @{example}); \
 to mention the user write @you. Stay fully in character; don't repeat what others already said.
+Start with your mood as ONE tag from {", ".join(f"[{e}]" for e in EMOTIONS)} (e.g. "[happy] ..."); it is hidden from the chat and only sets your avatar's expression.
 
 {GUARDRAILS}"""
     if state.get("crisis"):
@@ -1020,7 +1034,8 @@ async def friend_speaks_node(state: RoomState) -> dict:
         run_name=f"{room.id}_{friend_id}",
     )
     names = [next(p["name"] for p in state["participants"] if p["id"] == friend_id), state["cast"][friend_id].name]
-    text = _clean_reply(content_text(response.content), room.max_words, names)
+    emotion, raw = split_emotion(content_text(response.content))
+    text = _clean_reply(raw, room.max_words, names)
     if not text:
         logger.warning("%s returned an empty message; skipping", friend_id)
         return {}
@@ -1040,6 +1055,7 @@ async def friend_speaks_node(state: RoomState) -> dict:
             "text": text,
             "reply_to": message["reply_to"],
             "mentions": message["mentions"],
+            "emotion": emotion,
         },
     ))
     return {"new_messages": [message]}

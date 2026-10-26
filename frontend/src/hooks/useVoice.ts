@@ -25,7 +25,7 @@ const KEY = "nth-opinion.voice-input";
 const listeners = new Set<() => void>();
 let handsFree: boolean | null = null;
 
-function readHandsFree(): boolean {
+export function readHandsFree(): boolean {
   handsFree ??= loadJson<{ handsFree?: boolean }>(KEY)?.handsFree === true;
   return handsFree;
 }

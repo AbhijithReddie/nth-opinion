@@ -11,11 +11,15 @@
  *   - ai: the backend's POST /api/tts (only when GET /api/tts/status says it's
  *     on). Word timings are estimated from the audio's progress. Any failure
  *     (quota, network) quietly falls back to the browser voice for that message.
+ *
+ * Lip sync (call mode) reads `lipSource()`: an AnalyserNode on the AI audio, or
+ * the current word and when it started (browser voices give no audio stream).
  */
 
 import { hashOf, voiceProfile, type VoiceProfile } from "@/config/voices";
 import { API_URL } from "../sseClient";
 import { loadJson, saveJson } from "../storage";
+import type { Emotion } from "../chatTypes";
 import { estimatedSeconds, speechText, wordAtChar, wordAtProgress, type SpeechText } from "./speechText";
 
 export interface SpeakRequest {
@@ -27,6 +31,8 @@ export interface SpeakRequest {
   text: string;
   /** The chat language id (for AI voices). */
   language?: string;
+  /** The speaker's mood (call mode avatars). */
+  emotion?: Emotion;
 }
 
 export interface SpeakingNow extends SpeakRequest {
@@ -42,6 +48,8 @@ export interface VoiceState {
   captions: boolean;
   /** Speed multiplier, 0.75 to 1.5. */
   speed: number;
+  /** 0 to 1. */
+  volume: number;
   speaking: SpeakingNow | null;
   queued: number;
   /** Speech output exists in this browser at all. */
@@ -52,13 +60,14 @@ export const SPEEDS = [0.75, 1, 1.25, 1.5];
 const PREFS_KEY = "nth-opinion.voice";
 
 // --- state + subscriptions ------------------------------------------------------
-type Prefs = Pick<VoiceState, "enabled" | "captions" | "speed">;
+type Prefs = Pick<VoiceState, "enabled" | "captions" | "speed" | "volume">;
 const saved = typeof window === "undefined" ? null : loadJson<Partial<Prefs>>(PREFS_KEY);
 let state: VoiceState = {
   // Off by default: browsers only allow audio after a click, and turning this on is that click.
   enabled: saved?.enabled === true,
   captions: saved?.captions !== false,
   speed: SPEEDS.includes(saved?.speed as number) ? (saved!.speed as number) : 1,
+  volume: typeof saved?.volume === "number" ? Math.min(1, Math.max(0, saved.volume)) : 1,
   speaking: null,
   queued: 0,
   supported: typeof window !== "undefined" && "speechSynthesis" in window,
@@ -68,8 +77,16 @@ const SERVER_STATE: VoiceState = { ...state, enabled: false, speaking: null, que
 
 function set(patch: Partial<VoiceState>) {
   state = { ...state, ...patch };
-  if ("enabled" in patch || "captions" in patch || "speed" in patch) {
-    saveJson(PREFS_KEY, { enabled: state.enabled, captions: state.captions, speed: state.speed });
+  if ("enabled" in patch || "captions" in patch || "speed" in patch || "volume" in patch) {
+    saveJson(PREFS_KEY, { enabled: state.enabled, captions: state.captions, speed: state.speed, volume: state.volume });
+  }
+  if (patch.speaking !== undefined) {
+    // A new word (or nothing): remember when it started, for lip sync.
+    if (patch.speaking?.word !== lip.word || patch.speaking?.key !== lip.key) {
+      lip.word = patch.speaking?.word ?? -1;
+      lip.key = patch.speaking?.key ?? "";
+      lip.since = performance.now();
+    }
   }
   listeners.forEach((l) => l());
 }
@@ -90,6 +107,19 @@ export const voice = {
   },
   setCaptions: (on: boolean) => set({ captions: on }),
   setSpeed: (speed: number) => set({ speed }),
+  /** Applies to the message being read too (AI audio) and from the next one (browser voices). */
+  setVolume(volume: number) {
+    set({ volume });
+    if (gain) gain.gain.value = volume;
+  },
+
+  /** What drives the speaker's mouth right now (null: nobody is speaking, so mouths close at once). */
+  lipSource(): LipSource | null {
+    const now = state.speaking;
+    if (!now) return null;
+    if (now.engine === "ai" && audioRouted && analyser) return { kind: "audio", analyser };
+    return { kind: "words", speech: now.speech, word: now.word, since: lip.since, rate: lip.rate };
+  },
 
   /** Add a message to the queue (when "Read replies aloud" is on). */
   enqueue(request: SpeakRequest) {
@@ -122,6 +152,12 @@ export const voice = {
     void next();
   },
 };
+
+export type LipSource =
+  | { kind: "audio"; analyser: AnalyserNode }
+  | { kind: "words"; speech: SpeechText; word: number; since: number; rate: number };
+/** When the current word started (performance.now) and the voice's rate. */
+const lip = { key: "", word: -1, since: 0, rate: 1 };
 
 // --- the queue ------------------------------------------------------------------------
 const queue: SpeakRequest[] = [];
@@ -190,7 +226,9 @@ function playBrowser(request: SpeakRequest, speech: SpeechText, mine: number, pr
   const utterance = new SpeechSynthesisUtterance(speech.spoken);
   utterance.pitch = profile.pitch;
   utterance.rate = profile.rate * state.speed;
+  utterance.volume = state.volume;
   utterance.lang = "en-IN";
+  lip.rate = utterance.rate;
   let boundaries = false;
   const created = performance.now();
   let started = 0; // when speech really starts (an earlier message may still be finishing)
@@ -234,6 +272,35 @@ function playBrowser(request: SpeakRequest, speech: SpeechText, mine: number, pr
 
 // --- engine 2: AI voices from the backend ----------------------------------------------
 let aiStatus: Promise<boolean> | null = null;
+// Web Audio for AI voices: audio element -> gain (volume) -> analyser (lip sync) -> speakers.
+let audioContext: AudioContext | null = null;
+let gain: GainNode | null = null;
+let analyser: AnalyserNode | null = null;
+let audioRouted = false; // the current AI audio goes through the analyser
+
+function connectAudio(audio: HTMLAudioElement) {
+  // Only when audio was unlocked by a click (unlockAudio); routing into a suspended context would be silent.
+  audioRouted = false;
+  if (audioContext?.state !== "running") {
+    audio.volume = state.volume;
+    return;
+  }
+  try {
+    if (!gain || !analyser) {
+      gain = audioContext.createGain();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.5;
+      gain.connect(analyser).connect(audioContext.destination);
+    }
+    gain.gain.value = state.volume;
+    audioContext.createMediaElementSource(audio).connect(gain);
+    audioRouted = true;
+  } catch {
+    analyser = null; // the audio still plays, and lips follow the words instead
+    audio.volume = state.volume;
+  }
+}
 
 function aiAvailable(): Promise<boolean> {
   aiStatus ??= fetch(`${API_URL}/api/tts/status`)
@@ -255,6 +322,7 @@ async function playAi(request: SpeakRequest, speech: SpeechText, mine: number, p
     const url = URL.createObjectURL(await response.blob());
     const audio = new Audio(url);
     audio.playbackRate = state.speed;
+    connectAudio(audio);
     const finish = () => {
       URL.revokeObjectURL(url);
       done();
@@ -278,6 +346,12 @@ async function playAi(request: SpeakRequest, speech: SpeechText, mine: number, p
 
 /** Speak a silent utterance inside the user's click, so later speech is allowed to play (iOS/Safari). */
 function unlockAudio() {
+  try {
+    audioContext ??= new AudioContext();
+    void audioContext.resume();
+  } catch {
+    // no Web Audio: AI voices play without the analyser
+  }
   if (!state.supported) return;
   const silent = new SpeechSynthesisUtterance(" ");
   silent.volume = 0;

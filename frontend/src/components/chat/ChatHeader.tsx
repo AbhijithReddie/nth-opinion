@@ -1,4 +1,5 @@
 import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
+import { ChatBubbleIcon, PhoneIcon } from "../icons";
 import { VoiceToggle } from "../voice/VoiceOutput";
 import { Avatar } from "./Avatar";
 import { ChatMenu } from "./ChatMenu";
@@ -12,6 +13,9 @@ export function ChatHeader({
   onEdit,
   onClearChat,
   onWatchDemo,
+  view = "chat",
+  onView,
+  callName = "Call",
 }: {
   typing: string[];
   /** Current mode id, for rooms with modes. */
@@ -20,6 +24,10 @@ export function ChatHeader({
   onEdit?: () => void;
   onClearChat?: () => void;
   onWatchDemo?: () => void;
+  /** Chat or Call view (the call has its own voice and "Behind the scenes" controls). */
+  view?: "chat" | "call";
+  onView?: (view: "chat" | "call") => void;
+  callName?: string;
 }) {
   const { config, setup, persona, nameOf } = useRoom();
   const modeLabel = config.modes?.find((m) => m.id === mode)?.label;
@@ -49,11 +57,39 @@ export function ChatHeader({
           {modeLabel}
         </span>
       )}
-      <VoiceToggle />
-      <BehindTheScenesToggle compact />
+      {onView && <ViewSwitch view={view} onView={onView} callName={callName} />}
+      {view === "chat" && (
+        <>
+          <VoiceToggle />
+          <BehindTheScenesToggle compact />
+        </>
+      )}
       {onEdit && onClearChat && (
         <ChatMenu editLabel={config.copy.editMenu} onEdit={onEdit} onClearChat={onClearChat} onWatchDemo={onWatchDemo} />
       )}
     </header>
+  );
+}
+
+/** The Chat / Call switch: two views of the same conversation. */
+export function ViewSwitch({ view, onView, callName, chatName = "Chat" }: { view: "chat" | "call"; onView: (view: "chat" | "call") => void; callName: string; chatName?: string }) {
+  const option = (id: "chat" | "call", label: string, icon: React.ReactNode) => (
+    <button
+      type="button"
+      aria-pressed={view === id}
+      onClick={() => onView(id)}
+      className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none ${
+        view === id ? "bg-surface text-ink shadow-soft" : "text-muted hover:text-ink"
+      }`}
+    >
+      {icon}
+      <span className="sr-only sm:not-sr-only">{label}</span>
+    </button>
+  );
+  return (
+    <div role="group" aria-label="View" className="flex shrink-0 items-center gap-0.5 rounded-lg border border-line-strong bg-sand p-0.5">
+      {option("chat", chatName, <ChatBubbleIcon className="size-3.5" />)}
+      {option("call", callName, <PhoneIcon className="size-3.5" />)}
+    </div>
   );
 }

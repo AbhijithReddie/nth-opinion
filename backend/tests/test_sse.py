@@ -36,7 +36,7 @@ def test_room_stream_events(client, fake_llm):
     names = [e for e, _ in events]
     assert names == ["typing", "message", "typing", "message", "typing", "message", "your_turn"]
     message = next(d for e, d in events if e == "message")
-    assert set(message) == {"id", "friend_id", "text", "reply_to", "mentions"}
+    assert set(message) == {"id", "friend_id", "text", "reply_to", "mentions", "emotion"}
 
 
 def test_behind_the_scenes_adds_trace_events_only(client, fake_llm):

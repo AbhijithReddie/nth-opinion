@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { findBuiltIn, LANGUAGES, MESSAGE_MAX, NAME_MAX, personaById, type RoomChatConfig } from "@/config/roomChats";
-import { newId, type ChatItem, type ChatMessage, type RoomEvent, type RoomSetup, type SummaryItem } from "@/lib/chatTypes";
+import { EMOTIONS, newId, type ChatItem, type ChatMessage, type RoomEvent, type RoomSetup, type SummaryItem } from "@/lib/chatTypes";
 import { playEvents, type ReplayClock, type RoomReplay } from "@/lib/replay";
 import { fetchRoomSummary, streamRoomMessage } from "@/lib/roomsApi";
 import { StreamError, type SlowState } from "@/lib/sseClient";
@@ -257,6 +257,7 @@ export function useRoomChat(config: RoomChatConfig, replay?: RoomReplayPlayback,
                 mentions: event.mentions ?? [],
                 reactions: [],
                 ts: Date.now(),
+                ...(event.emotion && EMOTIONS.includes(event.emotion) ? { emotion: event.emotion } : {}),
               },
             ]);
             await wait(250 + Math.random() * 450); // small gap before the next persona chimes in

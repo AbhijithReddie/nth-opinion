@@ -402,7 +402,7 @@ SSE events:
 | Event       | Data |
 | ----------- | ---- |
 | `typing`    | `{"friend_id"}` |
-| `message`   | `{"id", "friend_id", "text", "reply_to": id \| null, "mentions": [friend ids or "user"]}` |
+| `message`   | `{"id", "friend_id", "text", "reply_to": id \| null, "mentions": [friend ids or "user"], "emotion"}` (emotion: happy, excited, thoughtful, annoyed, concerned or neutral; for call mode) |
 | `reaction`  | `{"friend_id", "message_id", "emoji"}` |
 | `safety`    | `{"helpline_text"}` |
 | `mode`      | `{"mode"}`: the director switched modes (rooms with modes only) |
@@ -978,6 +978,63 @@ Word timings come from the browser's word events where available, and are
 estimated from the text and audio length otherwise (always for AI voices).
 Captions can be switched off (the CC button), and with reduced motion the
 highlight is a plain underline.
+
+## Call mode (and the Debate Arena's Stage mode)
+
+Every room has a **Chat / Call** switch in its header; the Debate Arena has
+**Arena / Stage mode** next to the motion. Both views show the same
+conversation (the same state), so switching never loses anything.
+
+- **Joining.** Call mode opens with a short "Join call" screen (a ringing phone).
+  The Join click unlocks audio and turns on voice output, captions and
+  hands-free; **End call** returns to the chat with the full transcript and puts
+  those settings back as they were. "Switch to chat" keeps the call going.
+- **Animated avatars** (`components/call/AnimatedAvatar.tsx`) reuse the
+  illustrated avatar artwork (`components/chat/Avatar.tsx`, built-in and custom
+  personas) with a face whose parts move: random natural blinking, brows,
+  a mouth that morphs between closed, slightly open, open, wide and round "O",
+  and a head that sways gently, nods while listening and glances up while
+  thinking. States: listening, thinking (after the typing event), speaking and
+  reacting. In Future You, the future selves are age variants of your avatar
+  (`lib/call/scenes.ts`: grey hair, glasses, softer features at 50).
+- **Emotions.** Room `message` events carry an optional `emotion` (happy,
+  excited, thoughtful, annoyed, concerned or neutral). The persona picks it in the
+  same LLM call that writes the message (a leading tag like `[happy]`, removed
+  from the text), so it costs no extra calls. It sets the expression while that
+  message is spoken; missing (older replays) means neutral.
+- **Lip sync** (`lib/voice/lipSync.ts`). AI voices (`TTS_PROVIDER=gemini`): the
+  audio goes through a Web Audio `AnalyserNode`, its loudness each frame sets
+  how open the mouth is (lightly smoothed), and a low/high frequency check picks
+  the "O" or wide shape. Browser voices (no access to their audio): the caption
+  word timings drive the mouth, opening and closing once per estimated syllable,
+  and closing between words and at punctuation. Either way it follows the same
+  word as the captions and shuts the moment speech stops.
+- **Layouts** (`lib/call/scenes.ts`, `components/call/CallStage.tsx`): a cosy grid
+  (Group Chat), investors in a row facing your spotlight (Pitch Tank), three
+  interviewers across a table (Interview Panel), you in the middle of a timeline
+  with your future selves either side (Future You), a classroom board and table
+  (Study Group), a small stage with a mic (Roast & Toast), and two podiums with
+  the judge raised in the centre (Debate Arena). The speaking tile glows in the
+  persona's colour, grows slightly and shows an equaliser; reactions float up
+  from the reacting persona's tile; guests have a Guest badge. On phones the
+  active speaker is in a spotlight with everyone else in a strip below.
+- **Your tile** shows your initial (your avatar in Future You) and whether your
+  mic is listening. The optional camera self-view is off by default; it's only
+  shown in your own tile, and never recorded, uploaded or sent anywhere.
+- **Controls:** mic (tap to toggle, or hold to talk; **M**), hands-free (sends
+  when you stop talking and listens again once the room has replied), captions
+  (**C**), sound (read aloud, volume, speed), camera, behind the scenes, the
+  room's summary button, Switch to chat and End call. You can also type under the
+  stage.
+- **Performance and accessibility:** one shared `requestAnimationFrame` loop
+  (`lib/call/frameLoop.ts`) moves every avatar by writing SVG attributes directly
+  (no React re-renders per frame) and pauses while the tab is hidden. With
+  reduced motion there's no sway, nodding or floating, and the mouth simply fades
+  open and closed. New messages are announced to screen readers (`aria-live`);
+  every control is labelled and reachable by keyboard.
+- **Replays and sharing:** demo replays play in call mode too (no AI quota). When
+  a room's results arrive during a call, "See them in chat" opens the result
+  card, where sharing and the PDF report work as before.
 
 ## Installable app (PWA)
 
