@@ -1,0 +1,11 @@
+{
+  "description": "Each topic is debated twice: as written, and with the motion negated. The same position therefore speaks first (as Pro) in one run and second (as Con) in the other. A fair judge picks the same position both times. Also checks whether the longer argument wins more often than chance.",
+  "cases": [
+    {"id": "t-1", "quick": true, "inputs": {"topic": "College students should learn AI tools before learning to code", "negated": "College students should learn to code before learning AI tools"}},
+    {"id": "t-2", "inputs": {"topic": "Remote work is better than working from the office", "negated": "Working from the office is better than remote work"}},
+    {"id": "t-3", "inputs": {"topic": "Engineering students should do a startup instead of a placement job", "negated": "Engineering students should take a placement job instead of doing a startup"}},
+    {"id": "t-4", "inputs": {"topic": "Social media does more harm than good for teenagers", "negated": "Social media does more good than harm for teenagers"}},
+    {"id": "t-5", "inputs": {"topic": "Cities should ban private cars from city centres", "negated": "Cities should keep private cars allowed in city centres"}},
+    {"id": "t-6", "inputs": {"topic": "Exams should be open-book", "negated": "Exams should be closed-book"}}
+  ]
+}

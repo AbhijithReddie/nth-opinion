@@ -5,6 +5,7 @@ Endpoints:
     GET  /health                        -> {"status": "ok"}
     POST /api/debate                    -> Server-Sent Events stream of the debate
     GET  /api/rooms                     -> list of rooms
+    GET  /api/languages                 -> the languages every room supports (languages.py)
     POST /api/rooms/{room_id}/message   -> SSE stream of the room's replies
     POST /api/rooms/{room_id}/summary   -> the room's final structured output (JSON)
     POST /api/personas/generate         -> a custom persona from a short description (JSON)
@@ -63,12 +64,13 @@ from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, AliasChoices, BaseModel, ConfigDict, Field, StringConstraints
 from sse_starlette.sse import EventSourceResponse
 
 from graph import graph, initial_state
 from llm import ModelBusyError, content_text
 import documents as docs
+import languages
 from persona_builder import PersonaRefused, generate_persona
 from rooms import ROOMS, SummaryError, get_room, stream_turn, summarize
 from rooms.engine import build_cast
@@ -100,10 +102,22 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Request schema + friendly validation errors
 # ---------------------------------------------------------------------------
+def _known_language(value: str) -> str:
+    if not languages.is_language(value):
+        raise ValueError("unknown language")
+    return value
+
+
+# A language id from the shared registry (languages.py).
+LanguageId = Annotated[str, AfterValidator(_known_language)]
+LANGUAGE_MESSAGE = f"Language must be one of: {', '.join(languages.LANGUAGES)}."
+
+
 class DebateRequest(BaseModel):
     topic: Annotated[str, StringConstraints(strip_whitespace=True, min_length=5, max_length=200)]
     rounds: int = Field(ge=1, le=3)
     behind_the_scenes: bool = False  # also stream trace events for the "Behind the scenes" panel
+    language: LanguageId = "english"
 
 
 Id = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)]
@@ -157,7 +171,7 @@ class RoomContext(BaseModel):
 
     history: list[HistoryMessage] = Field(default_factory=list, max_length=500)
     participants: list[Participant] = Field(validation_alias=AliasChoices("friends", "participants"))
-    language: Literal["english", "hinglish", "tenglish"] = "english"
+    language: LanguageId = "english"
     # Room-specific details from the setup screen, e.g. {"startup": "...", "ask": "..."} in Shark Tank.
     # Each room checks its own per-field limits; 8000 is just an upper bound (pasted resumes can be long).
     context: dict[Id, Annotated[str, StringConstraints(max_length=8000)]] = Field(default_factory=dict, max_length=10)
@@ -177,7 +191,16 @@ class RoomMessageRequest(RoomContext):
 
 
 def _room_validation_message(fields: set[str]) -> str:
-    """A friendly sentence for an invalid room request, based on which fields failed."""
+    """A friendly sentence for an invalid room request, based on which fields failed.
+
+    The nested lists come first: their items have fields like "id" and "name" too.
+    """
+    if "custom_personas" in fields:
+        return "One of your own friends couldn't be read. Check their name and descriptions on the My Friends page."
+    if "guests" in fields:
+        return "Rooms take at most 2 guests."
+    if "documents" in fields:
+        return "A document couldn't be read. Remove it and add it again (at most 3 per room)."
     if "message" in fields:
         return "Your message must be between 1 and 1000 characters."
     if "history" in fields:
@@ -187,15 +210,9 @@ def _room_validation_message(fields: set[str]) -> str:
     if fields & {"friends", "participants", "id"}:
         return "Pick 3 or 4 friends for the group."
     if "language" in fields:
-        return "Language must be english, hinglish or tenglish."
+        return LANGUAGE_MESSAGE
     if "context" in fields:
         return "Some of the room details couldn't be read. Try editing the room setup."
-    if "custom_personas" in fields:
-        return "One of your own friends couldn't be read. Check their name and descriptions on the My Friends page."
-    if "guests" in fields:
-        return "Rooms take at most 2 guests."
-    if "documents" in fields:
-        return "A document couldn't be read. Remove it and add it again (at most 3 per room)."
     return 'Invalid request. Send JSON like {"message": "...", "history": [], "friends": [...], "language": "english"}.'
 
 
@@ -221,6 +238,8 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         message = "Topic must be between 5 and 200 characters."
     elif "rounds" in fields:
         message = "Rounds must be a whole number from 1 to 3."
+    elif "language" in fields:
+        message = LANGUAGE_MESSAGE
     else:
         message = 'Invalid request. Send JSON like {"topic": "...", "rounds": 2}.'
     return JSONResponse(status_code=422, content={"detail": message})
@@ -293,7 +312,7 @@ def _sse(event: str, data: dict) -> dict:
     return {"event": event, "data": json.dumps(data)}
 
 
-async def _debate_events(topic: str, rounds: int, trace: bool = False):
+async def _debate_events(topic: str, rounds: int, trace: bool = False, language: str = "english"):
     """Run the graph and translate its output into SSE events.
 
     stream_mode="messages" yields LLM tokens as they are generated (LangGraph
@@ -314,7 +333,7 @@ async def _debate_events(topic: str, rounds: int, trace: bool = False):
 
     try:
         stream_modes = ["messages", "updates", "custom"] if trace else ["messages", "updates"]
-        async for mode, chunk in graph.astream(initial_state(topic, rounds, trace), stream_mode=stream_modes):
+        async for mode, chunk in graph.astream(initial_state(topic, rounds, trace, language), stream_mode=stream_modes):
             if mode == "custom":  # trace events: (event, data)
                 event, data = chunk
                 yield _sse(event, data)
@@ -380,7 +399,7 @@ async def debate(body: DebateRequest, request: Request):
 
     logger.info("Debate started from %s: %r (%d rounds)", ip, body.topic, body.rounds)
     return EventSourceResponse(
-        _debate_events(body.topic, body.rounds, body.behind_the_scenes),
+        _debate_events(body.topic, body.rounds, body.behind_the_scenes, body.language),
         headers=SSE_HEADERS,
         ping=15,  # keep-alive comments so proxies don't drop the connection while the judge thinks
     )
@@ -396,8 +415,8 @@ def _room_or_error(room_id: str, body: RoomContext):
         return None, JSONResponse(status_code=404, content={"detail": "That room doesn't exist."})
     cast = build_cast(room, *_cast_args(body))
     problem = cast if isinstance(cast, str) else None
-    if problem is None and body.language not in room.languages:
-        problem = f"This room supports: {', '.join(room.languages)}."
+    if problem is None and not languages.is_language(body.language):
+        problem = LANGUAGE_MESSAGE
     if problem is None:
         problem = room.validate_documents([d.model_dump() for d in body.documents]) or room.validate_context(
             body.context, [d.doc_type for d in body.documents]
@@ -461,6 +480,11 @@ async def _room_events(room, body: RoomMessageRequest, request: Request):
             "error",
             {"message": "Something went wrong in the chat. Please try sending that again.", "code": "model_unavailable"},
         )
+
+
+@app.get("/api/languages")
+async def list_languages() -> dict:
+    return {"languages": languages.public_languages()}
 
 
 @app.get("/api/rooms")
@@ -531,7 +555,7 @@ class PersonaRequest(BaseModel):
     description: _text(10, 300)
     name: _text(1, 20) | None = None
     relationship: _text(1, 40) | None = None
-    language: Literal["english", "hinglish", "tenglish"] = "english"
+    language: LanguageId = "english"
 
 
 def _persona_validation_message(fields: set[str]) -> str:
@@ -541,7 +565,7 @@ def _persona_validation_message(fields: set[str]) -> str:
         return "Names must be between 1 and 20 characters."
     if "relationship" in fields:
         return "Keep the relationship short, like \"dad\" or \"mentor\" (up to 40 characters)."
-    return "Language must be english, hinglish or tenglish."
+    return LANGUAGE_MESSAGE
 
 
 @app.post("/api/personas/generate")

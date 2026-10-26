@@ -148,6 +148,7 @@ SHARK_TANK = register_room(
         description="Pitch your startup idea to 3 investors who grill you and make offers.",
         personas=PERSONAS,
         languages=LANGUAGES,
+        language_note="Talk the way investors do on an Indian startup pitch show, and use ₹, lakhs and crores for money.",
         min_participants=3,
         max_participants=3,
         context_fields=(

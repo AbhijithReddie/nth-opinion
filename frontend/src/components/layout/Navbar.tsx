@@ -41,6 +41,9 @@ export function Navbar() {
           <Link href="/about" className={linkClass("/about")} aria-current={pathname === "/about" ? "page" : undefined}>
             About
           </Link>
+          <Link href="/how-we-test" className={linkClass("/how-we-test")} aria-current={pathname === "/how-we-test" ? "page" : undefined}>
+            How we test
+          </Link>
           <a href={GITHUB_URL} target="_blank" rel="noreferrer" className={`${linkClass("")} gap-2`}>
             <GitHubIcon className="size-4" />
             GitHub

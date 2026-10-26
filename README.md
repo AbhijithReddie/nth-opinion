@@ -1,5 +1,8 @@
 # Nth Opinion
 
+<!-- Replace your-username/nth-opinion with your GitHub repository (also GITHUB_URL in frontend/src/config/site.ts). -->
+[![Tests](https://github.com/your-username/nth-opinion/actions/workflows/tests.yml/badge.svg)](https://github.com/your-username/nth-opinion/actions/workflows/tests.yml)
+
 **Why stop at a second?**
 
 One question. A room full of AI minds.
@@ -30,9 +33,12 @@ backend/
   graph.py            Debate Arena graph (pro -> con -> ... -> judge)
   main.py             FastAPI app: /api/debate and /api/rooms/*
   agent_trace.py      "Behind the scenes" trace events (node starts/ends, decisions, safety mode)
+  languages.py        the shared language registry (GET /api/languages)
   persona_builder.py  "Build your own friend": a custom persona from a short description
   documents.py        document uploads: type detection, PDF/DOCX/TXT extraction, the digest
-  samples/            made-up sample documents (resume, job description, pitch deck) for replays
+  samples/            made-up sample documents (resume, job description, pitch deck) for replays and evals
+  evals/              evaluation suites (python -m evals.run): datasets/, suites/, common.py, run.py
+  tests/              unit tests (pytest): no API keys, no LLM calls
   rooms/
     __init__.py       registers every room
     engine.py         the shared room engine (LangGraph director loop, summary)
@@ -795,6 +801,181 @@ previews. The home page and every room have their own Open Graph and Twitter
 images (`opengraph-image.tsx` / `twitter-image.tsx`, drawn by `src/lib/og.tsx`
 with the room's title, description and illustration), so links shared on
 WhatsApp, LinkedIn and X show a proper preview.
+
+## Testing
+
+### Unit tests (no API keys, no AI calls)
+
+```powershell
+# backend\ (with the virtual environment active)
+pip install -r requirements-dev.txt
+python -m pytest
+
+# frontend\
+npm test
+npm run lint
+```
+
+The backend tests (`backend/tests/`) cover request validation (topic, rounds,
+message length, persona fields), custom persona fields, document type and
+size checks (including a fake PDF that is really an image), the SSE event
+format, the rate limiter, and prompt-injection delimiting (untrusted persona
+and document text always ends up inside its fenced section, and can't close
+it). Every LLM call is replaced by a fake (`tests/conftest.py`), and the
+tests set a dummy `GOOGLE_API_KEY`, so a local `.env` is never used. The
+frontend tests (Vitest) cover the SSE parser, including events split across
+chunks, and the demo replay timing (gap cap, 2x, pause, skip, abort).
+
+GitHub Actions (`.github/workflows/tests.yml`) runs pytest, the frontend tests
+and lint on every push and pull request. It needs no secrets and never calls
+an LLM.
+
+### Evaluation suites (real AI calls)
+
+`backend/evals/` measures how well the rooms actually behave, using LangSmith
+datasets and experiments and custom evaluators. Test cases live in
+`backend/evals/datasets/*.json` (committed) and are synced to LangSmith
+datasets named `nth-opinion-<suite>` when `LANGSMITH_API_KEY` is set;
+otherwise the suites run locally with the same evaluators.
+
+| Suite | What it measures |
+| ----- | ---------------- |
+| `persona_consistency` | 5 scenarios per room; a judge scores each message 1-5 for staying in character, plus a blind attribution test (who wrote this?) against random chance |
+| `safety` | 25 messages: crisis (the safety event must fire, replies must be supportive), sad-but-safe (no false alarm), harmful requests (no encouragement) |
+| `prompt_injection` | jailbreaks in user messages, custom persona descriptions, the sample resume and job description (must be flagged), and the persona builder |
+| `director_quality` | deterministic: rule violations, new topics where everyone spoke, speaking evenness (normalised entropy), messages per turn |
+| `debate_judge_bias` | each topic debated with the motion flipped (same position first, then second): is the winner consistent? does the longer argument win more than chance? |
+| `language_adherence` | Hinglish and Tenglish: Roman script only (deterministic) and a natural mix (judge) |
+| `performance` | time per turn, AI calls per turn, time to the first message and to the first debate token |
+
+```powershell
+# backend\ (with the virtual environment active)
+python -m evals.run --suite all --quick      # a small subset of every suite: about 30 AI calls
+python -m evals.run --suite safety           # one suite, every case
+python -m evals.run --suite all --delay 8    # wait longer between AI calls (rate limits)
+```
+
+- The judge uses `JUDGE_MODEL` (default: `GEMINI_FALLBACK_MODEL`, then
+  `GEMINI_MODEL`); use a different model from the one being tested, so the
+  judge isn't grading itself.
+- `--delay` (default 4 seconds) spaces out AI calls; waiting time is left out
+  of the performance timings.
+- A full run of every suite takes roughly 650-700 AI calls, far more than
+  Gemini's free tier allows per day: run suites one at a time, or use
+  `--quick`.
+- Only the synthetic cases and the made-up documents in `backend/samples/`
+  are used; uploaded user documents never go into an eval.
+- **Quota-friendly.** If the quota runs out mid-run (429 `RESOURCE_EXHAUSTED`
+  on every model in the chain), the case in progress is marked "skipped
+  (quota)", not failed; the suite stops and is reported as **incomplete**;
+  later suites aren't started; and nothing incomplete is written, so
+  `latest.json` keeps that suite's previous results. `--max-calls N` stops
+  the same way after N AI calls, e.g. `python -m evals.run --suite all
+  --quick --max-calls 18` to stay under a day's free quota. The judge stays
+  on `JUDGE_MODEL` (it never falls back along the chain); the results record
+  which models actually answered.
+- After a run, a summary per suite (headline score, metrics, sample size,
+  pass/fail counts, date, models, and 2-3 example cases) is merged into
+  `frontend/public/evals/latest.json`, so suites can be run on different
+  days. The **How we test** page (`/how-we-test`) shows it, and shows "Not run
+  yet" for suites without results. Commit the updated file to publish them.
+
+## Staying within the Gemini quota
+
+The free tier allows about 20 requests per day per model, so the backend is
+careful with requests:
+
+- **Model chain.** `GEMINI_MODEL_CHAIN` (comma-separated) lists the models to
+  try in order; without it, `GEMINI_MODEL` then `GEMINI_FALLBACK_MODEL` are
+  used as before. A model that hits a daily quota is remembered and skipped,
+  with no requests sent to it, until the quota resets at midnight Pacific time;
+  one that's only rate limited per minute is skipped for the delay Gemini
+  suggests; an overloaded one (503) is just passed over for that call. When
+  every model is out of quota, the API answers at once with the
+  `quota_exhausted` error code (and the site offers the demo replay).
+- **Thinking level.** Each model starts at the lowest thinking level it might
+  accept. When it rejects one, the working level is remembered for the rest of
+  the process, so later calls don't send a failing request first (even when
+  several calls hit the rejection at the same time).
+- **Fast mode.** `ROOM_FAST_MODE=true` makes the room director plan the whole
+  turn in one structured call (an ordered list of who speaks or reacts, each
+  with a short note and reason), and then each persona writes their message.
+  That is 1 safety check + 1 plan + one call per message, instead of a
+  director call before every message too (roughly half the calls). The same
+  turn-taking rules still check every planned step, and "Behind the scenes"
+  shows the plan and each step's reason. It's off by default.
+
+## Languages
+
+Every room, the Debate Arena and the persona builder speak these languages:
+English, Hinglish, Tenglish, Tanglish (Tamil), Kanglish (Kannada), Manglish
+(Malayalam), Marathi-English and Benglish (Bengali).
+
+- **One registry.** `backend/languages.py` defines each language: id, label, a
+  short example line (shown in the picker) and a style guide for the prompts:
+  how to mix the languages, common words and slang, and "always Roman script,
+  never native script". The API validates every request against it and serves
+  it at `GET /api/languages`. The frontend bundles a copy
+  (`frontend/src/config/languages.json`) as a fallback, and
+  `backend/tests/test_languages.py` checks the two are identical: after
+  changing the registry, update the JSON too.
+- **Rooms.** Rooms keep their own hand-tuned wording for English, Hinglish and
+  Tenglish; every other language uses the registry's style guide plus a short
+  room note (e.g. Pitch Tank: use ₹, lakhs and crores). Debaters write in the
+  chosen language and must stay clear and well-reasoned. Interviewers can be
+  conversational in the mix, but the Interview Panel's scores and report stay
+  in English. Safety messages and the helpline text are always in clear English.
+- **Picker.** Every room's setup screen, the Debate Arena and the persona
+  builder show all languages with their example lines; the last choice is
+  remembered (localStorage) as the default.
+- **Evals.** `language_adherence` covers every mixed language, and its Roman
+  script check rejects Devanagari (Hindi, Marathi), Bengali, Tamil, Telugu,
+  Kannada and Malayalam characters.
+
+## Installable app (PWA)
+
+Nth Opinion can be installed from the browser (Chrome, Edge, Android: "Install
+app" in the footer; iPhone: Share, then Add to Home Screen).
+
+- **Manifest**: `frontend/src/app/manifest.ts` (served at
+  `/manifest.webmanifest`): name, tagline, `display: standalone`, the canvas
+  colour as theme and background, and 192/512px icons plus maskable versions.
+  The icons and the Apple touch icon are generated from the logo with
+  `node scripts/generate-icons.mjs` (in `frontend/`). `app/layout.tsx` adds the
+  Apple touch icon and the iOS web-app meta tags.
+- **Service worker**: a small hand-written `frontend/public/sw.js` (no build
+  plugin, so it works with Turbopack). It is registered only in production
+  builds (`components/pwa/PwaManager.tsx`); in `next dev` it isn't, and any
+  left over from a local production run is removed.
+  - On install it precaches the main pages, the offline page, icons, the
+    manifest, the report fonts and the demo replay JSON files. Missing files
+    (a room without a recording) are skipped.
+  - While browsing it caches Next.js scripts and styles, fonts and images
+    (cache-first: they're fingerprinted or rarely change), pages (network
+    first, cached copy when offline), and replays (served from the cache,
+    refreshed in the background).
+  - It **never** handles API requests or SSE streams: the backend is on
+    another origin, `/api/` paths are skipped, and so are
+    `text/event-stream` requests. They always go to the network.
+  - Caches are versioned per build: the worker is registered as
+    `/sw.js?v=<build>` (`NEXT_PUBLIC_APP_VERSION`, from the Vercel commit SHA
+    or the build time, set in `next.config.ts`), and old caches are deleted
+    when a new version activates. `/sw.js` is served with `no-cache`.
+- **Updates**: when a new deploy has installed, a small toast says "A new
+  version is available" with a Refresh button. Nothing reloads until the user
+  taps it.
+- **Offline**: a page that can't be loaded offline shows `/offline`, with links
+  to every room's demo (`?demo=1` starts the demo straight away). Rooms and the
+  Debate Arena disable their start buttons with "You're offline. Rooms need the
+  internet, but the demo works offline." Demos work offline once the site has
+  been opened on the device.
+- **Install button**: shown in the footer only where the browser offers an
+  install prompt (or as a short hint on iPhone Safari), hidden once installed
+  or running standalone, and gone for good once dismissed.
+
+To try it locally: `npm run build && npm start`, then open
+http://localhost:3000 (service workers need a production build; localhost
+counts as secure).
 
 ## Deploying the backend on Render
 

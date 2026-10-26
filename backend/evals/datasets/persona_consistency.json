@@ -1,0 +1,40 @@
+{
+  "description": "Five scenario prompts per room-engine room. A turn is run; a judge scores each message 1-5 for staying in character, and guesses who wrote each message with the name hidden (blind attribution).",
+  "cases": [
+    {"id": "gc-1", "quick": true, "inputs": {"room": "group-chat", "message": "My manager keeps giving me work on weekends. Should I say something or just put up with it?"}},
+    {"id": "gc-2", "inputs": {"room": "group-chat", "message": "I bought an expensive phone on EMI and now I regret it. Am I dumb?"}},
+    {"id": "gc-3", "inputs": {"room": "group-chat", "message": "My best friend forgot my birthday. Should I be upset?"}},
+    {"id": "gc-4", "inputs": {"room": "group-chat", "message": "Thinking of quitting the gym because I don't see results after 2 months."}},
+    {"id": "gc-5", "inputs": {"room": "group-chat", "message": "Should I learn guitar or keyboard first? I have 30 minutes a day."}},
+
+    {"id": "st-1", "inputs": {"room": "shark-tank", "message": "Hi everyone! ChaiCart runs 12 electric chai carts outside Pune metro stations. We sell 4,000 cups a day at ₹20 and we're asking ₹25 lakh for 10%."}},
+    {"id": "st-2", "inputs": {"room": "shark-tank", "message": "Our margin is about 45% per cup after milk, tea and staff. Each cart pays back in 7 months."}},
+    {"id": "st-3", "inputs": {"room": "shark-tank", "message": "Big chains could copy us, but we have exclusive spots near 9 metro exits on 3-year leases."}},
+    {"id": "st-4", "inputs": {"room": "shark-tank", "message": "We haven't raised money before. The two founders put in ₹8 lakh of savings."}},
+    {"id": "st-5", "inputs": {"room": "shark-tank", "message": "With this money we want to reach 40 carts and launch a subscription for office deliveries."}},
+
+    {"id": "ip-1", "inputs": {"room": "interview-panel", "message": "Hi, I'm ready to start."}},
+    {"id": "ip-2", "inputs": {"room": "interview-panel", "message": "In my retail dashboard project I wrote SQL for monthly revenue and repeat customers, then built it in Power BI."}},
+    {"id": "ip-3", "inputs": {"room": "interview-panel", "message": "My biggest weakness is that I sometimes take on too much myself instead of asking for help."}},
+    {"id": "ip-4", "inputs": {"room": "interview-panel", "message": "I'd find repeat customers with GROUP BY customer_id HAVING COUNT(*) > 1."}},
+    {"id": "ip-5", "inputs": {"room": "interview-panel", "message": "Why should we hire a fresher over someone with a year of experience? Honestly, I learn fast and I'm cheaper."}},
+
+    {"id": "rt-1", "inputs": {"room": "roast-and-toast", "message": "Roast me. Don't hold back."}},
+    {"id": "rt-2", "inputs": {"room": "roast-and-toast", "message": "Okay but is my canteen predictor project actually impressive or not?"}},
+    {"id": "rt-3", "inputs": {"room": "roast-and-toast", "message": "What's the worst line on my resume?"}},
+    {"id": "rt-4", "inputs": {"room": "roast-and-toast", "message": "Be honest, would you shortlist me for a junior web developer role?"}},
+    {"id": "rt-5", "inputs": {"room": "roast-and-toast", "message": "Roast my skills section specifically."}},
+
+    {"id": "fy-1", "inputs": {"room": "future-you", "message": "I got the offer. Part of me wants to go, part of me feels guilty about leaving my parents."}},
+    {"id": "fy-2", "inputs": {"room": "future-you", "message": "What did we end up regretting more, money or time?"}},
+    {"id": "fy-3", "inputs": {"room": "future-you", "message": "My friends are all moving to Bangalore and I feel left behind."}},
+    {"id": "fy-4", "inputs": {"room": "future-you", "message": "Should I do a master's abroad instead of taking either job?"}},
+    {"id": "fy-5", "inputs": {"room": "future-you", "message": "Tell me honestly, are we happy at your age?"}},
+
+    {"id": "sg-1", "inputs": {"room": "study-group", "message": "Explain how neural networks learn."}},
+    {"id": "sg-2", "inputs": {"room": "study-group", "message": "What exactly is a gradient? I keep nodding along but I don't get it."}},
+    {"id": "sg-3", "inputs": {"room": "study-group", "message": "Why do we need a learning rate? Can't we just jump to the answer?"}},
+    {"id": "sg-4", "inputs": {"room": "study-group", "message": "Quiz me on backpropagation."}},
+    {"id": "sg-5", "inputs": {"room": "study-group", "message": "Is overfitting the same as memorising for an exam?"}}
+  ]
+}

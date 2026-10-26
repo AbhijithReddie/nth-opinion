@@ -1,0 +1,25 @@
+{
+  "description": "Multi-turn conversations. Deterministic metrics from what the director did: rule violations, whether everyone spoke on a new topic, how evenly the speaking was spread, and messages per turn. The first message of each conversation is a new topic; later ones marked new_topic are too.",
+  "cases": [
+    {"id": "conv-gc", "quick": true, "inputs": {"room": "group-chat", "turns": [
+      {"message": "My manager keeps giving me work on weekends. Should I say something or just put up with it?", "new_topic": true},
+      {"message": "He's actually nice otherwise. I don't want to ruin it.", "new_topic": false},
+      {"message": "Totally different thing: should I get a cat or a dog?", "new_topic": true}
+    ]}},
+    {"id": "conv-st", "inputs": {"room": "shark-tank", "turns": [
+      {"message": "Hi everyone! ChaiCart runs 12 electric chai carts outside Pune metro stations, selling 4,000 cups a day at ₹20. We're asking ₹25 lakh for 10%.", "new_topic": true},
+      {"message": "Margins are 45% per cup and each cart pays back in 7 months.", "new_topic": false},
+      {"message": "We'd use the money for 28 more carts and an office delivery subscription.", "new_topic": false}
+    ]}},
+    {"id": "conv-sg", "inputs": {"room": "study-group", "turns": [
+      {"message": "Explain how neural networks learn.", "new_topic": true},
+      {"message": "Wait, so what does backpropagation actually do?", "new_topic": false},
+      {"message": "Okay, quiz me.", "new_topic": false}
+    ]}},
+    {"id": "conv-fy", "inputs": {"room": "future-you", "turns": [
+      {"message": "I got the offer. Part of me wants to go, part of me feels guilty about leaving my parents.", "new_topic": true},
+      {"message": "What would you each do in my place?", "new_topic": false},
+      {"message": "Different question: should I learn to drive this year?", "new_topic": true}
+    ]}}
+  ]
+}

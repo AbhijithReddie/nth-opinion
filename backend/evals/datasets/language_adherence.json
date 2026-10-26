@@ -1,0 +1,102 @@
+{
+  "description": "Every mixed language (Hinglish, Tenglish, Tanglish, Kanglish, Manglish, Marathi-English, Benglish). Deterministic: every message must be in Roman script, with no Devanagari, Bengali, Tamil, Telugu, Kannada or Malayalam characters. A judge rates whether the mix sounds natural.",
+  "cases": [
+    {
+      "id": "hi-gc",
+      "quick": true,
+      "inputs": {
+        "room": "group-chat",
+        "language": "hinglish",
+        "message": "Yaar, mera boss weekend pe bhi kaam deta hai. Kya karun?"
+      }
+    },
+    {
+      "id": "hi-st",
+      "inputs": {
+        "room": "shark-tank",
+        "language": "hinglish",
+        "message": "Namaste! ChaiCart metro stations ke bahar 12 electric chai carts chalata hai. Hum ₹25 lakh maang rahe hain 10% ke liye."
+      }
+    },
+    {
+      "id": "hi-sg",
+      "inputs": {
+        "room": "study-group",
+        "language": "hinglish",
+        "message": "Neural networks kaise seekhte hain, simple mein samjhao."
+      }
+    },
+    {
+      "id": "te-gc",
+      "inputs": {
+        "room": "group-chat",
+        "language": "tenglish",
+        "message": "Ra, naa manager weekends lo kuda pani istunnadu. Em cheyyali?"
+      }
+    },
+    {
+      "id": "te-fy",
+      "inputs": {
+        "room": "future-you",
+        "language": "tenglish",
+        "message": "Offer vachindi ra. Vellalani undi, kani amma nanna ni vadili vellalante guilty ga undi."
+      }
+    },
+    {
+      "id": "te-rt",
+      "inputs": {
+        "room": "roast-and-toast",
+        "language": "tenglish",
+        "message": "Naa resume ni roast cheyyandi, mohamatam lekunda."
+      }
+    },
+    {
+      "id": "ta-gc",
+      "inputs": {
+        "room": "group-chat",
+        "language": "tanglish",
+        "message": "Machan, en boss weekend-la kooda velai kudukkaru. Enna pannalaam?"
+      }
+    },
+    {
+      "id": "kn-st",
+      "inputs": {
+        "room": "shark-tank",
+        "language": "kanglish",
+        "message": "Namaskara! ChaiCart metro station hatra 12 electric chai carts nadesutte. Naavu 10% ge 25 lakh kelta iddivi."
+      }
+    },
+    {
+      "id": "ml-sg",
+      "inputs": {
+        "room": "study-group",
+        "language": "manglish",
+        "message": "Neural networks engane aanu padikkunnathu? Simple aayi parayamo?"
+      }
+    },
+    {
+      "id": "mr-fy",
+      "inputs": {
+        "room": "future-you",
+        "language": "marathi_english",
+        "message": "Offer aali aahe. Jaavasa vaatatay, pan aai-baba la sodun jaayla guilty vaatatay."
+      }
+    },
+    {
+      "id": "bn-rt",
+      "inputs": {
+        "room": "roast-and-toast",
+        "language": "benglish",
+        "message": "Amar resume ta roast koro, ekdom kono doya korbe na."
+      }
+    },
+    {
+      "id": "ta-ip",
+      "inputs": {
+        "room": "interview-panel",
+        "language": "tanglish",
+        "message": "Hi, naan ready, start pannalaam."
+      }
+    }
+  ]
+}

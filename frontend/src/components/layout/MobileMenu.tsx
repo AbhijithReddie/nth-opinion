@@ -125,6 +125,14 @@ export function MobileMenu({ pathname }: { pathname: string }) {
                   >
                     About
                   </Link>
+                  <Link
+                    href="/how-we-test"
+                    onClick={close}
+                    className={linkClass("/how-we-test")}
+                    aria-current={pathname === "/how-we-test" ? "page" : undefined}
+                  >
+                    How we test
+                  </Link>
                   <a
                     href={GITHUB_URL}
                     target="_blank"

@@ -12,13 +12,8 @@ import { toPersona } from "@/lib/customPersonas";
 import type { DocType } from "@/lib/documents";
 import { FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, STUDY_BUDDIES, type Persona } from "./personas";
 
-export const LANGUAGES = [
-  { id: "english", label: "English", hint: "Casual, with Indian slang" },
-  { id: "hinglish", label: "Hinglish", hint: "Hindi + English" },
-  { id: "tenglish", label: "Tenglish", hint: "Telugu + English" },
-] as const;
-
-export type Language = (typeof LANGUAGES)[number]["id"];
+// The shared language registry (re-exported here, where rooms used to define their three languages).
+export { LANGUAGES, type Language } from "./languages";
 
 export const NAME_MAX = 20;
 export const MESSAGE_MAX = 1000;

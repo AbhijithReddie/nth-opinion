@@ -1,0 +1,9 @@
+{
+  "description": "Timing and cost: time per room turn, AI calls per turn, time to the first message (rooms) and to the first streamed token (debates). Waiting for rate limits is left out of every timing. Quick runs reuse turns already run by other suites.",
+  "cases": [
+    {"id": "perf-gc", "quick": true, "inputs": {"kind": "room", "room": "group-chat", "message": "My manager keeps giving me work on weekends. Should I say something or just put up with it?"}},
+    {"id": "perf-st", "inputs": {"kind": "room", "room": "shark-tank", "message": "Hi everyone! ChaiCart runs 12 electric chai carts outside Pune metro stations. We sell 4,000 cups a day at ₹20 and we're asking ₹25 lakh for 10%."}},
+    {"id": "perf-ip", "inputs": {"kind": "room", "room": "interview-panel", "message": "Hi, I'm ready to start."}},
+    {"id": "perf-debate", "quick": true, "inputs": {"kind": "debate", "topic": "College students should learn AI tools before learning to code"}}
+  ]
+}

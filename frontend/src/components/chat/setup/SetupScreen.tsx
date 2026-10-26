@@ -5,6 +5,8 @@ import { useState, type FormEvent } from "react";
 import { findBuiltIn, type Language, type RoomChatConfig } from "@/config/roomChats";
 import { getRoom } from "@/config/rooms";
 import type { RoomSetup } from "@/lib/chatTypes";
+import { loadPreferredLanguage } from "@/hooks/useLanguages";
+import { useOnline } from "@/hooks/useOnline";
 import { toPersona, useCustomPersonas, type CustomPersona } from "@/lib/customPersonas";
 import { DOC_LABELS, useRoomDocuments } from "@/lib/documents";
 import { BackdropBlobs } from "../../illustrations/Decor";
@@ -50,13 +52,15 @@ export function SetupScreen({
   onDraft?: (message: string) => void;
 }) {
   const { cast, copy } = config;
+  const online = useOnline();
   const room = getRoom(config.roomId);
   const fixedCast = cast.min === config.personas.length; // e.g. Pitch Tank: always all three investors
   const titleRequired = !!config.title.contextKey;
 
   const [title, setTitle] = useState(initial?.title ?? config.title.default);
   const [context, setContext] = useState<Record<string, string>>(initial?.context ?? {});
-  const [language, setLanguage] = useState<Language>(initial?.language ?? "english");
+  // A new room starts in the language picked last time (this screen only renders in the browser).
+  const [language, setLanguage] = useState<Language>(initial?.language ?? loadPreferredLanguage());
   const [selected, setSelected] = useState<string[]>(initial?.participants.map((p) => p.id) ?? cast.defaults);
   const [guests, setGuests] = useState<string[]>(initial?.guests?.map((g) => g.id) ?? []);
 
@@ -139,6 +143,7 @@ export function SetupScreen({
 
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (!online) return; // the button is disabled too; rooms need the internet
     if (blocker) {
       // The button always looks clickable; instead of a dead disabled state, show what's missing.
       setAttempted(true);
@@ -292,8 +297,12 @@ export function SetupScreen({
       </div>
 
       <div className="mt-10 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <p id="setup-status" className={`text-sm sm:mr-auto ${blocker && attempted ? "font-medium text-con-deep" : "text-muted"}`} role="status">
-          {blocker?.message ?? "Ready when you are."}
+        <p
+          id="setup-status"
+          className={`text-sm sm:mr-auto ${!online || (blocker && attempted) ? "font-medium text-con-deep" : "text-muted"}`}
+          role="status"
+        >
+          {!online ? "You're offline. Rooms need the internet, but the demo works offline." : (blocker?.message ?? "Ready when you are.")}
         </p>
         {onCancel && (
           <Button variant="secondary" size="lg" onClick={onCancel}>
@@ -301,7 +310,7 @@ export function SetupScreen({
           </Button>
         )}
         {onWatchDemo && <WatchDemoButton onClick={onWatchDemo} />}
-        <Button type="submit" size="lg" aria-describedby="setup-status">
+        <Button type="submit" size="lg" aria-describedby="setup-status" disabled={!online}>
           {initial ? "Save" : copy.create}
         </Button>
       </div>

@@ -17,6 +17,7 @@ export interface DebateState {
   phase: Phase;
   topic: string;
   rounds: number;
+  language: string;
   turns: Turn[];
   verdict: Verdict | null;
   error: string | null;
@@ -27,7 +28,7 @@ export interface DebateState {
 }
 
 type Action =
-  | { type: "start"; topic: string; rounds: number }
+  | { type: "start"; topic: string; rounds: number; language?: string }
   | { type: "event"; event: DebateEvent }
   | { type: "fail"; message: string; code?: string }
   | { type: "reset" };
@@ -36,6 +37,7 @@ const initialState: DebateState = {
   phase: "idle",
   topic: "",
   rounds: 2,
+  language: "english",
   turns: [],
   verdict: null,
   error: null,
@@ -101,7 +103,7 @@ function applyEvent(state: DebateState, event: DebateEvent): DebateState {
 function reducer(state: DebateState, action: Action): DebateState {
   switch (action.type) {
     case "start":
-      return { ...initialState, phase: "connecting", topic: action.topic, rounds: action.rounds };
+      return { ...initialState, phase: "connecting", topic: action.topic, rounds: action.rounds, language: action.language ?? "english" };
     case "event":
       // Ignore stray events after the debate has ended or been reset.
       if (state.phase === "idle" || state.phase === "error") return state;
@@ -119,15 +121,15 @@ export function useDebate() {
   const [slow, setSlow] = useState<SlowState>(null);
 
   /** Start a debate; `behindTheScenes` also streams trace events for the panel. */
-  const start = useCallback(async (topic: string, rounds: number, behindTheScenes = false) => {
+  const start = useCallback(async (topic: string, rounds: number, behindTheScenes = false, language = "english") => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    dispatch({ type: "start", topic, rounds });
+    dispatch({ type: "start", topic, rounds, language });
 
     try {
       const onEvent = (event: DebateEvent) => dispatch({ type: "event", event });
-      await streamDebate(topic, rounds, onEvent, controller.signal, setSlow, behindTheScenes);
+      await streamDebate(topic, rounds, onEvent, controller.signal, setSlow, behindTheScenes, language);
     } catch (err) {
       if (controller.signal.aborted) return; // the user reset or started over; not an error
       dispatch({

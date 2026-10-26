@@ -9,9 +9,11 @@ export type TraceEvent =
   | { type: "node_start"; node: string; label: string; round?: number }
   | { type: "node_end"; node: string; duration_ms: number }
   | { type: "director_decision"; action: "speak" | "react" | "end"; persona_id?: string | null; reply_to?: string | null; reason: string }
-  | { type: "safety_check"; mode: "normal" | "supportive" };
+  | { type: "safety_check"; mode: "normal" | "supportive" }
+  /** Fast mode (backend ROOM_FAST_MODE): the director planned the whole turn in one call. */
+  | { type: "director_plan"; reason: string; steps: { action: "speak" | "react"; persona_id: string; reason: string }[] };
 
-export const TRACE_EVENT_TYPES = ["node_start", "node_end", "director_decision", "safety_check"];
+export const TRACE_EVENT_TYPES = ["node_start", "node_end", "director_decision", "safety_check", "director_plan"];
 
 export interface TraceDecision {
   id: number;
@@ -43,6 +45,8 @@ export interface TraceState {
   /** Node runs this turn, newest first (the Debate Arena's timeline). */
   runs: TraceRun[];
   safety: "normal" | "supportive" | null;
+  /** Fast mode: the director's plan for the whole turn. */
+  plan: { reason: string; steps: { action: "speak" | "react"; personaId: string; reason: string }[] } | null;
   round: number | null;
   messages: number;
   reactions: number;
@@ -61,6 +65,7 @@ export const EMPTY_TRACE: TraceState = {
   decisions: [],
   runs: [],
   safety: null,
+  plan: null,
   round: null,
   messages: 0,
   reactions: 0,
@@ -115,6 +120,12 @@ export function applyTrace(state: TraceState, event: { type: string }): TraceSta
           { id: state.decisions.length + 1, action: e.action, personaId: e.persona_id ?? null, reason: e.reason, durationMs: null },
           ...state.decisions,
         ],
+      };
+    case "director_plan":
+      return {
+        ...state,
+        hasTrace: true,
+        plan: { reason: e.reason, steps: e.steps.map((s) => ({ action: s.action, personaId: s.persona_id, reason: s.reason })) },
       };
     case "safety_check":
       return { ...state, hasTrace: true, safety: e.mode };

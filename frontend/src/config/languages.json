@@ -1,0 +1,10 @@
+[
+  { "id": "english", "label": "English", "example": "Bro, just tell her. What's the worst that can happen?" },
+  { "id": "hinglish", "label": "Hinglish", "example": "Yaar tu tension mat le, ye scene sort ho jayega." },
+  { "id": "tenglish", "label": "Tenglish", "example": "Ra, nuvvu tension padaku, idi sort aipotundi." },
+  { "id": "tanglish", "label": "Tanglish", "example": "Machan, tension aagatha, idhu sort aayidum." },
+  { "id": "kanglish", "label": "Kanglish", "example": "Guru, tension togobeda, idu sort agutte." },
+  { "id": "manglish", "label": "Manglish", "example": "Machane, tension adikkenda, ithu sheriyakum." },
+  { "id": "marathi_english", "label": "Marathi-English", "example": "Arre, tension gheu nako, he sort hoil." },
+  { "id": "benglish", "label": "Benglish", "example": "Dada, tension nish na, eta sort hoye jabe." }
+]

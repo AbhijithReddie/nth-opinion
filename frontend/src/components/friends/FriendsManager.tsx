@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { usePreferredLanguage } from "@/hooks/useLanguages";
 import { PERSONA_COLOURS } from "@/config/personas";
 import type { Language } from "@/config/roomChats";
 import {
@@ -124,7 +125,10 @@ function Builder({ full, onSave }: { full: boolean; onSave: (friend: CustomPerso
   const [description, setDescription] = useState("");
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
-  const [language, setLanguage] = useState<Language>("english");
+  // The language picked last time, until one is picked here.
+  const preferred = usePreferredLanguage();
+  const [picked, setLanguage] = useState<Language | null>(null);
+  const language = picked ?? preferred;
   const [draft, setDraft] = useState<PersonaDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<{ message: string; refused: boolean } | null>(null);

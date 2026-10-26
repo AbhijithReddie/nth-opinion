@@ -27,10 +27,13 @@ export async function streamDebate(
   onSlow?: (slow: SlowState) => void,
   /** Also stream trace events for the "Behind the scenes" panel. */
   behindTheScenes = false,
+  /** A language id from config/languages (plain English sends nothing extra, as before). */
+  language = "english",
 ): Promise<void> {
+  const body = { topic, rounds, ...(behindTheScenes ? { behind_the_scenes: true } : {}), ...(language !== "english" ? { language } : {}) };
   await streamSse<DebateEvent>({
     path: "/api/debate",
-    body: behindTheScenes ? { topic, rounds, behind_the_scenes: true } : { topic, rounds },
+    body,
     eventTypes: EVENT_TYPES,
     finalEvents: FINAL_EVENTS,
     onEvent,

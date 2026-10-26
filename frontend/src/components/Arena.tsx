@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildFlow } from "@/config/flows";
 import { DEBATERS } from "@/config/personas";
 import { getRoom } from "@/config/rooms";
@@ -35,7 +35,7 @@ export function Arena() {
   const [behindTheScenes, setBehindTheScenes] = useBehindTheScenes();
   const wide = useWideScreen();
   // The panel asks the server for trace events, so the choice is read when a debate starts.
-  const startDebate = (topic: string, rounds: number) => start(topic, rounds, behindTheScenes);
+  const startDebate = (topic: string, rounds: number, language = "english") => start(topic, rounds, behindTheScenes, language);
 
   // Errors before the first turn (rate limit, server down, bad input) belong next to the form.
   const earlyError = state.phase === "error" && state.turns.length === 0 ? state.error : null;
@@ -43,14 +43,27 @@ export function Arena() {
 
   // A replay that's replaced or closed drops whatever it still had waiting to play.
   useEffect(() => () => clock?.dispose(), [clock]);
+  // ?demo=1 (the offline page's links): play the recorded debate as soon as it has loaded, once.
+  const autoDemoDone = useRef(false);
 
-  const watchDemo = recording
-    ? () => {
-        const next = new ReplayClock();
-        setClock(next);
-        void demo.replay(recording, next);
-      }
-    : undefined;
+  const replayDemo = demo.replay; // stable (useCallback)
+  const watchDemo = useMemo(
+    () =>
+      recording
+        ? () => {
+            const next = new ReplayClock();
+            setClock(next);
+            void replayDemo(recording, next);
+          }
+        : undefined,
+    [recording, replayDemo],
+  );
+  useEffect(() => {
+    if (!autoDemoDone.current && watchDemo && new URLSearchParams(window.location.search).has("demo")) {
+      autoDemoDone.current = true;
+      watchDemo();
+    }
+  }, [watchDemo]);
 
   function exitDemo() {
     demo.reset();
@@ -132,7 +145,7 @@ export function Arena() {
               <DebateView
                 state={state}
                 onNewDebate={newDebate}
-                onRetry={() => startDebate(state.topic, state.rounds)}
+                onRetry={() => startDebate(state.topic, state.rounds, state.language)}
                 onWatchDemo={offerOnError}
               />
             </div>

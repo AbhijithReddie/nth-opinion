@@ -4,6 +4,7 @@ import { DISCLAIMER, GITHUB_URL, SITE_EXPLAINER, SITE_NAME, SITE_TAGLINE } from 
 import { LogoMark } from "./brand/LogoMark";
 import { Wordmark } from "./brand/Wordmark";
 import { GitHubIcon } from "./icons";
+import { InstallApp } from "./pwa/InstallApp";
 
 /** Site footer: brand, quick links, the disclaimer and tech credits. */
 export function Footer() {
@@ -19,6 +20,7 @@ export function Footer() {
             {SITE_TAGLINE} {SITE_EXPLAINER}
           </p>
           <p className="mt-4 max-w-sm text-xs leading-relaxed text-faint">{DISCLAIMER}</p>
+          <InstallApp />
         </div>
 
         <FooterLinks title="Live rooms" links={LIVE_ROOMS.map((r) => ({ href: r.href, label: r.title }))} />
@@ -27,6 +29,7 @@ export function Footer() {
           links={[
             { href: "/", label: "Home" },
             { href: "/about", label: "About" },
+            { href: "/how-we-test", label: "How we test" },
           ]}
         >
           <li>

@@ -136,6 +136,7 @@ STUDY_GROUP = register_room(
         description="Learn a topic with a confused friend, the class topper and a meme-maker.",
         personas=PERSONAS,
         languages=LANGUAGES,
+        language_note="Keep technical terms and formulas in English.",
         min_participants=3,
         max_participants=3,
         modes=MODES,

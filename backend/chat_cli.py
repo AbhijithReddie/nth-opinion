@@ -15,6 +15,7 @@ import sys
 import textwrap
 import uuid
 
+from languages import LANGUAGES
 from llm import ModelBusyError
 from rooms import SummaryError, get_room, stream_turn, summarize
 
@@ -63,8 +64,8 @@ def ask_language(preset: str | None) -> str:
     if preset:
         return preset
     while True:
-        lang = read(f"Language ({' / '.join(ROOM.languages)}) [english]: ").lower() or "english"
-        if lang in ROOM.languages:
+        lang = read(f"Language ({' / '.join(LANGUAGES)}) [english]: ").lower() or "english"
+        if lang in LANGUAGES:
             return lang
         print("Please pick one of the listed languages.")
 
@@ -164,7 +165,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Chat with Nth Opinion's AI friend group in the terminal.")
     parser.add_argument("--friends", help="Comma-separated friend ids, e.g. rohit,priya,meera")
-    parser.add_argument("--language", choices=list(ROOM.languages))
+    parser.add_argument("--language", choices=list(LANGUAGES))
     parser.add_argument("--quiet", action="store_true", help="Hide director decisions and node timings")
     args = parser.parse_args()
 

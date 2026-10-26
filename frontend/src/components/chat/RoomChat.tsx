@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ROOM_CHATS, type RoomChatId } from "@/config/roomChats";
 import { useBehindTheScenes } from "@/hooks/useBehindTheScenes";
 import { useRoomDemo } from "@/hooks/useRoomDemo";
@@ -24,10 +24,12 @@ export default function RoomChat({ roomId }: { roomId: RoomChatId }) {
   const recording = useRoomDemo<RoomReplay>(chat.config.roomId);
   const [playback, setPlayback] = useState<RoomReplayPlayback | null>(null);
   // A recording made with an older setup (renamed persona, new required field, ...) is not offered.
-  const watchDemo =
-    recording && isValidSetup(chat.config, recording.setup)
-      ? () => setPlayback({ recording, clock: new ReplayClock() })
-      : undefined;
+  const demoOk = !!recording && isValidSetup(chat.config, recording.setup);
+  const watchDemo = demoOk ? () => setPlayback({ recording: recording!, clock: new ReplayClock() }) : undefined;
+  // ?demo=1 (the offline page's links): play the demo as soon as the recording has loaded.
+  const [autoDemo, setAutoDemo] = useState(() => new URLSearchParams(window.location.search).has("demo"));
+  const autoPlayback = useMemo(() => (autoDemo && demoOk ? { recording: recording!, clock: new ReplayClock() } : null), [autoDemo, demoOk, recording]);
+  const active = playback ?? autoPlayback;
 
   // Documents live in memory only: after a reload, a room that relied on one (instead of pasted text) asks for it again.
   const documents = useRoomDocuments(chat.config.roomId);
@@ -37,10 +39,17 @@ export default function RoomChat({ roomId }: { roomId: RoomChatId }) {
       )?.replacedBy
     : undefined;
 
-  if (playback) {
+  if (active) {
     return (
       <main id="main" className="flex-1">
-        <ReplayRoom config={chat.config} playback={playback} onExit={() => setPlayback(null)} />
+        <ReplayRoom
+          config={chat.config}
+          playback={active}
+          onExit={() => {
+            setPlayback(null);
+            setAutoDemo(false);
+          }}
+        />
       </main>
     );
   }

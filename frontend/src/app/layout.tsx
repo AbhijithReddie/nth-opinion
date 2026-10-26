@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
+import { PwaManager } from "@/components/pwa/PwaManager";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/config/site";
 import "./globals.css";
 
@@ -33,7 +34,11 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
+  // Installable app (the manifest is app/manifest.ts): full-screen on iOS, with its own title.
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
@@ -69,6 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <Navbar />
         {children}
+        <PwaManager />
       </body>
     </html>
   );

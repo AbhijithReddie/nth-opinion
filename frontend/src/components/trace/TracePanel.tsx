@@ -91,6 +91,7 @@ export function TracePanel(props: TracePanelProps & { header?: boolean }) {
             </p>
           )}
 
+          {trace.plan && <Plan plan={trace.plan} persona={persona} nameOf={props.nameOf} />}
           <Timeline {...props} />
           <Stats trace={trace} director={director} />
         </>
@@ -98,6 +99,33 @@ export function TracePanel(props: TracePanelProps & { header?: boolean }) {
 
       <Explainer text={flow.explainer} />
     </section>
+  );
+}
+
+/** Fast mode: the whole turn as the director planned it in one call (the timeline below shows what actually happened). */
+function Plan({ plan, persona, nameOf }: { plan: NonNullable<TraceState["plan"]>; persona: TracePanelProps["persona"]; nameOf: TracePanelProps["nameOf"] }) {
+  return (
+    <div>
+      <h3 className="font-mono text-[11px] tracking-[0.16em] text-muted uppercase">Plan for this turn</h3>
+      <p className="mt-1 text-sm text-muted">{plan.reason}</p>
+      <ol className="mt-2 space-y-1.5" aria-label="Planned steps, in order">
+        {plan.steps.map((s, i) => {
+          const who = persona(s.personaId);
+          return (
+            <li key={i} className="flex items-start gap-2 text-sm">
+              <span className="w-5 shrink-0 pt-1 text-right font-mono text-[11px] text-muted">{i + 1}.</span>
+              {who && <Avatar persona={who} size="xs" />}
+              <span className="min-w-0">
+                <span className="font-semibold">
+                  {nameOf(s.personaId)} {s.action === "speak" ? "speaks" : "reacts"}
+                </span>
+                <span className="text-muted"> · {s.reason}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 

@@ -23,6 +23,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
 from agent_trace import traced
+from languages import style as language_style
 from llm import ModelBusyError, content_text, invoke, timed
 
 logger = logging.getLogger("debate-arena.graph")
@@ -59,6 +60,7 @@ class DebateState(TypedDict, total=False):
     winner: str
     memo: str
     trace: bool  # send "Behind the scenes" trace events
+    language: str  # a languages.py id; arguments stay clear and well-reasoned in any language
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +118,14 @@ async def _speak(system_prompt: str, user_prompt: str) -> str:
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
+def _language_rule(state: DebateState) -> str:
+    """The debate's language, as a prompt line (nothing extra for plain English, as before)."""
+    language = state.get("language", "english")
+    if language == "english":
+        return ""
+    return f" Language: {language_style(language)} Whatever the language, keep the argument clear, well-structured and well-reasoned."
+
+
 def _node_info(node: str, label: str, round_no: int | None = None) -> dict:
     """node_start data for the trace; debaters include the round they argue in."""
     if round_no is None:
@@ -139,7 +149,7 @@ async def pro_node(state: DebateState) -> dict:
         "You are PRO in a formal debate. Argue FOR the motion with clear logic and "
         "concrete evidence or examples. Be persuasive and specific. "
         f"Stay strictly under {MAX_WORDS} words. Plain prose, no headings or bullet lists."
-    )
+    ) + _language_rule(state)
     user = f"Motion: {state['topic']}\nRound {round_no} of {state['max_rounds']}.\n\n"
     if last_con:
         user += (
@@ -169,7 +179,7 @@ async def con_node(state: DebateState) -> dict:
         "PRO's most recent argument point by point, then add your own case with clear "
         "logic and concrete evidence or examples. "
         f"Stay strictly under {MAX_WORDS} words. Plain prose, no headings or bullet lists."
-    )
+    ) + _language_rule(state)
     user = (
         f"Motion: {state['topic']}\nRound {round_no} of {state['max_rounds']}.\n\n"
         f"Debate so far:\n{_format_transcript(transcript)}\n\n"
@@ -188,7 +198,7 @@ async def judge_node(state: DebateState) -> dict:
         "You are an impartial debate judge. Evaluate only the arguments made in the "
         "transcript, not your own views on the motion. Score each side from 1 to 10 on "
         "logic, evidence and rebuttal, pick a winner, and write a balanced decision memo."
-    )
+    ) + _language_rule(state)
     user = f"Motion: {state['topic']}\n\nTranscript:\n{_format_transcript(state['transcript'])}"
 
     # The judge is kept deterministic and bound to the Verdict schema so it always returns valid JSON.
@@ -234,9 +244,10 @@ def build_graph():
 graph = build_graph()
 
 
-def initial_state(topic: str, max_rounds: int, trace: bool = False) -> DebateState:
+def initial_state(topic: str, max_rounds: int, trace: bool = False, language: str = "english") -> DebateState:
     return {
         "trace": trace,
+        "language": language,
         "topic": topic,
         "max_rounds": max_rounds,
         "current_round": 0,

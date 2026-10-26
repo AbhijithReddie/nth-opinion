@@ -17,6 +17,7 @@ from typing import Literal
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from languages import LANGUAGES
 from llm import invoke
 
 # Text-safe accent colours from the Chai & Sage palette (same as the built-in personas in
@@ -113,13 +114,6 @@ name that fits (e.g. "Papa", "Didi", "Coach Meera"). Never a real public figure'
 - avatar: choose options that match the description (age, style, vibe).
 If the verdict isn't "ok", still fill the other fields with short placeholders."""
 
-_LANGUAGES = {
-    "english": "English",
-    "hinglish": "Hinglish (Hindi + English in Roman script)",
-    "tenglish": "Tenglish (Telugu + English in Roman script)",
-}
-
-
 def _fence(text: str) -> str:
     """User text on one line without angle brackets, so it can't close the fence."""
     return " ".join(text.replace("<", "").replace(">", "").split())
@@ -144,7 +138,7 @@ async def generate_persona(description: str, name: str | None, relationship: str
         f"Relationship to the user: {_fence(relationship) if relationship else '(not given)'}\n</user_description>"
     )
     draft: PersonaDraft | None = await invoke(
-        [SystemMessage(content=_SYSTEM.format(language=_LANGUAGES[language])), HumanMessage(content=fenced)],
+        [SystemMessage(content=_SYSTEM.format(language=f"{LANGUAGES[language].label} (always in Roman script)")), HumanMessage(content=fenced)],
         temperature=0.8,
         schema=PersonaDraft,
         run_name="persona_builder",
