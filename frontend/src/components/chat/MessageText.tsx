@@ -11,7 +11,7 @@ export function MessageText({ text, inverse = false }: { text: string; inverse?:
 
   // Match chosen names and default names (longest first, so "@Big Bro" wins over "@Big").
   const targets = new Map<string, string | null>(); // lowercase name -> colour (null = the user)
-  for (const p of setup.participants) {
+  for (const p of [...setup.participants, ...(setup.guests ?? [])]) {
     const meta = persona(p.id);
     if (!meta) continue;
     targets.set(p.name.toLowerCase(), meta.color);

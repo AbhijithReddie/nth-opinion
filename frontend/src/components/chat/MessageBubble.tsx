@@ -18,8 +18,9 @@ interface MessageBubbleProps {
 
 /** One chat message: personas on the left with avatar and coloured name, the user on the right. */
 export function MessageBubble({ message, original, grouped, highlighted, onJump }: MessageBubbleProps) {
-  const { persona, nameOf } = useRoom();
+  const { persona, nameOf, isGuest } = useRoom();
   const mine = message.sender === "user";
+  const guest = !mine && isGuest(message.sender);
   const author = mine ? undefined : persona(message.sender);
   const name = nameOf(message.sender);
 
@@ -38,8 +39,13 @@ export function MessageBubble({ message, original, grouped, highlighted, onJump 
             }`}
           >
             {!mine && !grouped && (
-              <p className="mb-0.5 text-[13px] font-semibold" style={{ color: author?.color }}>
+              <p className="mb-0.5 flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: author?.color }}>
                 {name}
+                {guest && (
+                  <span className="rounded-full border border-line-strong bg-sand px-1.5 py-px text-[10px] font-semibold tracking-wide text-muted uppercase">
+                    Guest
+                  </span>
+                )}
               </p>
             )}
             {message.replyTo && <ReplyQuote original={original} onJump={onJump} inverse={mine} />}

@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LANGUAGES, MESSAGE_MAX, NAME_MAX, personaById, type RoomChatConfig } from "@/config/roomChats";
+import { findBuiltIn, LANGUAGES, MESSAGE_MAX, NAME_MAX, personaById, type RoomChatConfig } from "@/config/roomChats";
 import { newId, type ChatItem, type ChatMessage, type RoomEvent, type RoomSetup, type SummaryItem } from "@/lib/chatTypes";
 import { playEvents, type ReplayClock, type RoomReplay } from "@/lib/replay";
 import { fetchRoomSummary, streamRoomMessage } from "@/lib/roomsApi";
@@ -66,11 +66,21 @@ export function isValidSetup(config: RoomChatConfig, s: Partial<RoomSetup> | und
   if (config.contextFields.some((f) => f.required && !s.context?.[f.id]?.trim())) return false;
   if (config.title.contextKey && !s.title.trim()) return false;
   const people = s.participants;
+  const guests = s.guests ?? [];
+  const custom = Array.isArray(s.custom) ? s.custom : [];
+  const named = (p: { id: string; name: string } | undefined) => !!p && typeof p.name === "string" && !!p.name.trim() && p.name.length <= NAME_MAX;
+  // Members: the room's own personas, or (Group Chat) the user's own. Guests: the user's own, or another room's.
+  const isMember = (id: string) => !!personaById(config, id) || (!!config.customMembers && custom.some((c) => c.id === id));
+  const isGuestOk = (id: string) => custom.some((c) => c.id === id) || (!!findBuiltIn(id) && !personaById(config, id));
   return (
     Array.isArray(people) &&
     people.length >= config.cast.min &&
     people.length <= config.cast.max &&
-    people.every((p) => !!personaById(config, p?.id) && typeof p.name === "string" && !!p.name.trim() && p.name.length <= NAME_MAX)
+    people.every((p) => named(p) && isMember(p.id)) &&
+    Array.isArray(guests) &&
+    guests.length <= (config.guests?.max ?? 0) &&
+    people.length + guests.length <= (config.guests?.maxTotal ?? Infinity) &&
+    guests.every((g) => named(g) && isGuestOk(g.id))
   );
 }
 

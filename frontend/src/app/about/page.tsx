@@ -72,6 +72,18 @@ export default function AboutPage() {
               </p>
             </div>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Explainer title="Build your own friend">
+              On the My Friends page, describe a type of person (a strict but caring dad, a calm mentor) and get an AI
+              friend with their own personality and avatar, saved in your browser. Real people can&apos;t be built,
+              and whatever you write only describes a character: it can never change the room&apos;s rules or safety.
+            </Explainer>
+            <Explainer title="Cross-room guests">
+              Invite a persona from another room, or one of your own friends, as a guest: a friend in the audience at
+              your pitch, a coach in your corner at an interview. Guests speak less, and never take over the room&apos;s
+              main job: investors still decide and interviewers still score.
+            </Explainer>
+          </div>
         </section>
 
         <section aria-labelledby="stack-title" className="space-y-8">

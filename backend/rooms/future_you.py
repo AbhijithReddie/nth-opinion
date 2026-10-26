@@ -108,6 +108,10 @@ def _finalize_letters(result: FutureLetters, participants: list[dict]) -> dict:
 FUTURE_YOU = register_room(
     RoomConfig(
         id="future-you",
+        allows_guests=True,
+        max_guests=1,
+        guest_role="someone who knows the user well and adds their own perspective on the decision. They are not a "
+        "future version of the user and don't speak as one",
         title="Future You",
         description="You at 30 and 50 talk through a decision with you now.",
         personas=PERSONAS,

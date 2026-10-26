@@ -23,12 +23,16 @@ export function ChatHeader({
   const { config, setup, persona, nameOf } = useRoom();
   const modeLabel = config.modes?.find((m) => m.id === mode)?.label;
   const typingNames = typing.map(nameOf);
-  const status = typingNames.length ? typingLabel(typingNames) : `${setup.participants.map((p) => p.name).join(", ")}, You`;
+  const everyone = [...setup.participants, ...(setup.guests ?? [])];
+  const guestNames = (setup.guests ?? []).map((g) => `${g.name} (guest)`);
+  const status = typingNames.length
+    ? typingLabel(typingNames)
+    : `${[...setup.participants.map((p) => p.name), ...guestNames].join(", ")}, You`;
 
   return (
     <header className="flex items-center gap-3 border-b border-line bg-surface/90 px-3 py-2.5 backdrop-blur sm:px-4">
       <div className="flex -space-x-2.5" aria-hidden>
-        {setup.participants.map((p) => {
+        {everyone.map((p) => {
           const meta = persona(p.id);
           return meta ? <Avatar key={p.id} persona={meta} className="ring-2 ring-surface" /> : null;
         })}

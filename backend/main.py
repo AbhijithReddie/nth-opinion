@@ -7,6 +7,11 @@ Endpoints:
     GET  /api/rooms                     -> list of rooms
     POST /api/rooms/{room_id}/message   -> SSE stream of the room's replies
     POST /api/rooms/{room_id}/summary   -> the room's final structured output (JSON)
+    POST /api/personas/generate         -> a custom persona from a short description (JSON)
+
+Room requests may also carry "guests" (personas from other rooms, or the
+user's own) and "custom_personas" (the user's own personas, sent inline: the
+API stays stateless). Custom persona text is untrusted; see rooms/engine.py.
 
 SSE events sent by /api/debate (each `data:` field is JSON):
     turn_start  {"speaker", "round"}
@@ -53,12 +58,14 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import AliasChoices, BaseModel, Field, StringConstraints
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StringConstraints
 from sse_starlette.sse import EventSourceResponse
 
 from graph import graph, initial_state
 from llm import ModelBusyError, content_text
+from persona_builder import PersonaRefused, generate_persona
 from rooms import ROOMS, SummaryError, get_room, stream_turn, summarize
+from rooms.engine import build_cast
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("debate-arena")
@@ -108,6 +115,24 @@ class Participant(BaseModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)]
 
 
+def _text(min_length: int, max_length: int):
+    return Annotated[str, StringConstraints(strip_whitespace=True, min_length=min_length, max_length=max_length)]
+
+
+class CustomPersona(BaseModel):
+    """One of the user's own personas, sent inline. Every field is checked strictly; the text is untrusted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: Annotated[str, StringConstraints(pattern=r"^custom_[a-z0-9]{4,16}$")]
+    name: _text(1, 20)
+    emoji: _text(1, 8)
+    colour: Annotated[str, StringConstraints(pattern=r"^#[0-9A-Fa-f]{6}$")]
+    personality: _text(1, 300)
+    speaking_habits: _text(1, 200)
+    typical_stance: _text(1, 200)
+
+
 class RoomContext(BaseModel):
     """What every room request carries: the recent chat, who's in the room, and the language.
 
@@ -122,6 +147,10 @@ class RoomContext(BaseModel):
     # Room-specific details from the setup screen, e.g. {"startup": "...", "ask": "..."} in Shark Tank.
     # Each room checks its own per-field limits; 8000 is just an upper bound (pasted resumes can be long).
     context: dict[Id, Annotated[str, StringConstraints(max_length=8000)]] = Field(default_factory=dict, max_length=10)
+    # Cross-room guests (built-in personas from other rooms, or ids from custom_personas).
+    guests: list[Participant] = Field(default_factory=list, max_length=2)
+    # The user's own personas used as members or guests in this request.
+    custom_personas: list[CustomPersona] = Field(default_factory=list, max_length=6)
 
 
 class RoomMessageRequest(RoomContext):
@@ -145,12 +174,19 @@ def _room_validation_message(fields: set[str]) -> str:
         return "Language must be english, hinglish or tenglish."
     if "context" in fields:
         return "Some of the room details couldn't be read. Try editing the room setup."
+    if "custom_personas" in fields:
+        return "One of your own friends couldn't be read. Check their name and descriptions on the My Friends page."
+    if "guests" in fields:
+        return "Rooms take at most 2 guests."
     return 'Invalid request. Send JSON like {"message": "...", "history": [], "friends": [...], "language": "english"}.'
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Return a short readable message instead of Pydantic's raw error list."""
+    if request.url.path.startswith("/api/personas"):
+        fields = {str(part) for err in exc.errors() for part in err.get("loc", ())}
+        return JSONResponse(status_code=422, content={"detail": _persona_validation_message(fields)})
     if request.url.path.startswith("/api/rooms"):
         fields = {str(part) for err in exc.errors() for part in err.get("loc", ())}
         return JSONResponse(status_code=422, content={"detail": _room_validation_message(fields)})
@@ -197,6 +233,9 @@ debate_limiter = RateLimiter(
 )
 room_message_limiter = RateLimiter(
     40, "Your friends need a breather! You've sent 40 messages this hour. Try again a little later."
+)
+persona_limiter = RateLimiter(
+    10, "That's 10 new friends this hour! Give the builder a break and try again a little later."
 )
 summary_limiter = RateLimiter(
     10, "That's 10 votes and offer rounds this hour. Give the room a break and try again a little later."
@@ -326,7 +365,8 @@ def _room_or_error(room_id: str, body: RoomContext):
     room = get_room(room_id)
     if room is None:
         return None, JSONResponse(status_code=404, content={"detail": "That room doesn't exist."})
-    problem = room.validate_participants([p.model_dump() for p in body.participants])
+    cast = build_cast(room, *_cast_args(body))
+    problem = cast if isinstance(cast, str) else None
     if problem is None and body.language not in room.languages:
         problem = f"This room supports: {', '.join(room.languages)}."
     if problem is None:
@@ -334,6 +374,15 @@ def _room_or_error(room_id: str, body: RoomContext):
     if problem:
         return None, JSONResponse(status_code=422, content={"detail": problem})
     return room, None
+
+
+def _cast_args(body: RoomContext) -> tuple[list[dict], list[dict], list[dict]]:
+    """(members, guests, custom personas) as plain dicts for the engine."""
+    return (
+        [p.model_dump() for p in body.participants],
+        [g.model_dump() for g in body.guests],
+        [c.model_dump() for c in body.custom_personas],
+    )
 
 
 async def _room_events(room, body: RoomMessageRequest, request: Request):
@@ -345,13 +394,16 @@ async def _room_events(room, body: RoomMessageRequest, request: Request):
     events, so nothing more is generated for a client that has gone.
     """
     started = time.perf_counter()
+    members, guests, custom = _cast_args(body)
     try:
         async for event, data in stream_turn(
             room,
             message=body.message,
             message_id=body.message_id,
             history=[m.model_dump() for m in body.history],
-            participants=[p.model_dump() for p in body.participants],
+            participants=members,
+            guests=guests,
+            custom=custom,
             language=body.language,
             mode=body.mode,
             context=body.context,
@@ -414,11 +466,14 @@ async def room_summary(room_id: str, body: RoomContext, request: Request):
         return summary_limiter.reject(ip, f"{room_id} summary")
 
     started = time.perf_counter()
+    members, guests, custom = _cast_args(body)
     try:
         result = await summarize(
             room,
             history=[m.model_dump() for m in body.history],
-            participants=[p.model_dump() for p in body.participants],
+            participants=members,
+            guests=guests,
+            custom=custom,
             language=body.language,
             context=body.context,
         )
@@ -434,3 +489,44 @@ async def room_summary(room_id: str, body: RoomContext, request: Request):
         )
     logger.info("Room %s summary finished in %.1fs", room_id, time.perf_counter() - started)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Persona builder ("Build your own friend")
+# ---------------------------------------------------------------------------
+class PersonaRequest(BaseModel):
+    description: _text(10, 300)
+    name: _text(1, 20) | None = None
+    relationship: _text(1, 40) | None = None
+    language: Literal["english", "hinglish", "tenglish"] = "english"
+
+
+def _persona_validation_message(fields: set[str]) -> str:
+    if "description" in fields:
+        return "Describe your friend in 10 to 300 characters."
+    if "name" in fields:
+        return "Names must be between 1 and 20 characters."
+    if "relationship" in fields:
+        return "Keep the relationship short, like \"dad\" or \"mentor\" (up to 40 characters)."
+    return "Language must be english, hinglish or tenglish."
+
+
+@app.post("/api/personas/generate")
+async def personas_generate(body: PersonaRequest, request: Request):
+    ip = _client_ip(request)
+    if not persona_limiter.allow(ip):
+        return persona_limiter.reject(ip, "persona")
+    try:
+        persona = await generate_persona(body.description, body.name, body.relationship, body.language)
+    except PersonaRefused as exc:
+        logger.info("Persona description refused from %s", ip)
+        return JSONResponse(status_code=422, content={"detail": str(exc), "code": "persona_refused"})
+    except ModelBusyError as exc:
+        return JSONResponse(status_code=503, content={"detail": str(exc), "code": exc.code})
+    except Exception:
+        logger.exception("Persona builder failed")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Couldn't build your friend right now. Please try again.", "code": "model_unavailable"},
+        )
+    return persona

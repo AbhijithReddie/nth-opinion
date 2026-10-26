@@ -148,6 +148,13 @@ def _finalize_poll(poll: Poll, participants: list[dict]) -> dict:
 GROUP_CHAT = register_room(
     RoomConfig(
         id="group-chat",
+        # Guests join as extra friends; custom friends can also be regular members.
+        allows_guests=True,
+        max_guests=2,
+        max_total=5,
+        custom_members=True,
+        guest_role="an extra friend who joins the group chat for this conversation and chips in like the others, "
+        "just a bit less often",
         title="The Group Chat",
         description="Share a problem with a WhatsApp-style group of AI friends.",
         personas=PERSONAS,

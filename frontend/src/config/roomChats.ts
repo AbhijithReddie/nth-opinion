@@ -7,6 +7,8 @@
  * + a page that renders <RoomChatLoader roomId="..." />.
  */
 
+import type { RoomSetup } from "@/lib/chatTypes";
+import { toPersona } from "@/lib/customPersonas";
 import { FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, STUDY_BUDDIES, type Persona } from "./personas";
 
 export const LANGUAGES = [
@@ -51,6 +53,10 @@ export interface RoomModeConfig {
 
 export interface RoomChatConfig {
   roomId: string;
+  /** Cross-room guests (see backend RoomConfig.allows_guests): how many, and what they do here. */
+  guests?: { max: number; role: string; /** Members + guests, when the room caps it. */ maxTotal?: number };
+  /** The user's own personas ("My Friends") can also be regular members. */
+  customMembers?: boolean;
   /** localStorage key for this room's setup and chat. */
   storageKey: string;
   personas: Persona[];
@@ -97,6 +103,8 @@ export interface RoomChatConfig {
 export const ROOM_CHATS = {
   "group-chat": {
     roomId: "group-chat",
+    guests: { max: 2, maxTotal: 5, role: "Joins the group as an extra friend." },
+    customMembers: true,
     storageKey: "huddle.room.group-chat.v2",
     personas: GROUP_CHAT_FRIENDS,
     cast: { min: 3, max: 4, defaults: ["rohit", "priya", "meera"], renamable: true, heading: "Friends", noun: "friends" },
@@ -122,6 +130,7 @@ export const ROOM_CHATS = {
   },
   "shark-tank": {
     roomId: "shark-tank",
+    guests: { max: 1, role: "A friend in the audience who reacts and whispers advice to you." },
     storageKey: "huddle.room.shark-tank.v1",
     personas: SHARKS,
     cast: { min: 3, max: 3, defaults: ["kavya", "aditya", "rustom"], renamable: false, heading: "Your panel", noun: "investors" },
@@ -162,6 +171,7 @@ export const ROOM_CHATS = {
   },
   "roast-and-toast": {
     roomId: "roast-and-toast",
+    guests: { max: 1, role: "A guest roaster with their own style." },
     storageKey: "huddle.room.roast-and-toast.v1",
     personas: ROAST_PANEL,
     cast: { min: 3, max: 3, defaults: ["kabir", "nandini", "sameer"], renamable: false, heading: "Your panel", noun: "panelists" },
@@ -204,6 +214,7 @@ export const ROOM_CHATS = {
   },
   "interview-panel": {
     roomId: "interview-panel",
+    guests: { max: 1, role: "A coach in your corner with a quick private tip between questions." },
     storageKey: "huddle.room.interview-panel.v1",
     personas: INTERVIEWERS,
     cast: { min: 3, max: 3, defaults: ["pooja", "karthik", "devraj"], renamable: false, heading: "Your panel", noun: "interviewers" },
@@ -242,6 +253,7 @@ export const ROOM_CHATS = {
   },
   "future-you": {
     roomId: "future-you",
+    guests: { max: 1, role: "Someone who knows you, adding their own perspective." },
     storageKey: "huddle.room.future-you.v1",
     personas: FUTURE_SELVES,
     cast: { min: 2, max: 2, defaults: ["you30", "you50"], renamable: false, heading: "Who's joining you", noun: "future selves" },
@@ -290,6 +302,7 @@ export const ROOM_CHATS = {
   },
   "study-group": {
     roomId: "study-group",
+    guests: { max: 1, role: "A guest classmate who joins the session." },
     storageKey: "huddle.room.study-group.v1",
     personas: STUDY_BUDDIES,
     cast: { min: 3, max: 3, defaults: ["bunty", "ishaan", "tanvi"], renamable: false, heading: "Your study group", noun: "study buddies" },
@@ -337,3 +350,24 @@ export type RoomChatId = keyof typeof ROOM_CHATS;
 export function personaById(config: RoomChatConfig, id: string): Persona | undefined {
   return config.personas.find((p) => p.id === id);
 }
+
+/** A built-in persona from any room, with its room (guests can come from anywhere). */
+export function findBuiltIn(id: string): { persona: Persona; config: RoomChatConfig } | undefined {
+  for (const config of Object.values(ROOM_CHATS) as RoomChatConfig[]) {
+    const persona = personaById(config, id);
+    if (persona) return { persona, config };
+  }
+  return undefined;
+}
+
+/**
+ * The persona behind an id in a room: one of the room's own, one of the user's own
+ * (saved in the room's setup), or a guest from another room.
+ */
+export function resolvePersona(config: RoomChatConfig, setup: RoomSetup | null, id: string): Persona | undefined {
+  const custom = setup?.custom?.find((c) => c.id === id);
+  return personaById(config, id) ?? (custom ? toPersona(custom) : findBuiltIn(id)?.persona);
+}
+
+/** True if this id is a guest in the room. */
+export const isGuest = (setup: RoomSetup | null, id: string) => !!setup?.guests?.some((g) => g.id === id);

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { personaById, type RoomChatConfig } from "@/config/roomChats";
+import { isGuest, resolvePersona, type RoomChatConfig } from "@/config/roomChats";
 import type { Persona } from "@/config/personas";
 import type { RoomSetup } from "@/lib/chatTypes";
 
@@ -29,12 +29,15 @@ export function useRoom() {
     setup,
     demo,
     userTexts,
-    /** A persona of this room, or undefined for "user" / unknown ids. */
-    persona: (id: string): Persona | undefined => personaById(config, id),
+    /** A persona in this room (its own, a guest, or one of the user's own), or undefined for "user" / unknown ids. */
+    persona: (id: string): Persona | undefined => resolvePersona(config, setup, id),
+    /** True for a cross-room guest. */
+    isGuest: (id: string) => isGuest(setup, id),
     /** "You", the user's chosen name for a persona, or the persona's own name. */
     nameOf: (sender: string): string => {
       if (sender === "user") return "You";
-      return setup.participants.find((p) => p.id === sender)?.name ?? personaById(config, sender)?.name ?? "Someone";
+      const chosen = [...setup.participants, ...(setup.guests ?? [])].find((p) => p.id === sender)?.name;
+      return chosen ?? resolvePersona(config, setup, sender)?.name ?? "Someone";
     },
   };
 }

@@ -1,22 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { personaById, type Language, type RoomChatConfig } from "@/config/roomChats";
+import { findBuiltIn, type Language, type RoomChatConfig } from "@/config/roomChats";
 import { getRoom } from "@/config/rooms";
 import type { RoomSetup } from "@/lib/chatTypes";
+import { toPersona, useCustomPersonas, type CustomPersona } from "@/lib/customPersonas";
 import { BackdropBlobs } from "../../illustrations/Decor";
 import { RoomIllustration } from "../../illustrations/RoomIllustration";
 import { SampleSection } from "../../rooms/SampleSection";
 import { WatchDemoButton } from "../../replay/DemoNotice";
 import { Button } from "../../ui/Button";
 import { RoomSample } from "../RoomSample";
+import { GuestPicker } from "./GuestPicker";
 import { LanguagePicker } from "./LanguagePicker";
 import { PersonaCard } from "./PersonaCard";
 import { TextField } from "./TextField";
 
 /**
  * Create (or edit) a room: the title, the room's extra details (context fields),
- * the cast (picked and renamed, or a fixed panel), and the language.
+ * the cast (picked and renamed, or a fixed panel; in the Group Chat the user's own
+ * friends too), optional guests from other rooms or My Friends, and the language.
  * Below the form, "See it in action" shows the room's sample conversation; its
  * "Try this example" button fills the form, and the example's first message is
  * handed to the chat (via `onDraft`) when the room is created.
@@ -48,6 +52,18 @@ export function SetupScreen({
   const [context, setContext] = useState<Record<string, string>>(initial?.context ?? {});
   const [language, setLanguage] = useState<Language>(initial?.language ?? "english");
   const [selected, setSelected] = useState<string[]>(initial?.participants.map((p) => p.id) ?? cast.defaults);
+  const [guests, setGuests] = useState<string[]>(initial?.guests?.map((g) => g.id) ?? []);
+
+  // The user's own personas: saved friends, plus copies already in this room (still usable after a friend is deleted).
+  const { friends } = useCustomPersonas();
+  const customs: CustomPersona[] = [...friends, ...(initial?.custom ?? []).filter((c) => !friends.some((f) => f.id === c.id))];
+  const memberOptions = [...config.personas, ...(config.customMembers ? customs.map(toPersona) : [])];
+  const personaOf = (id: string) => {
+    const custom = customs.find((c) => c.id === id);
+    return memberOptions.find((p) => p.id === id) ?? (custom ? toPersona(custom) : findBuiltIn(id)?.persona);
+  };
+  const maxTotal = config.guests?.maxTotal ?? Infinity;
+  const roomFull = selected.length + guests.length >= maxTotal;
   // Chosen names for every persona, so renames survive deselecting and reselecting.
   const [names, setNames] = useState<Record<string, string>>(() => {
     const all = Object.fromEntries(config.personas.map((p) => [p.id, p.name]));
@@ -55,9 +71,11 @@ export function SetupScreen({
     return all;
   });
 
-  const full = selected.length >= cast.max;
+  const nameFor = (id: string) => names[id] ?? personaOf(id)?.name ?? "";
+  const full = selected.length >= cast.max || roomFull;
   const countOk = selected.length >= cast.min && selected.length <= cast.max;
-  const namesOk = !cast.renamable || selected.every((id) => names[id].trim().length > 0);
+  const totalOk = selected.length + guests.length <= maxTotal;
+  const namesOk = !cast.renamable || selected.every((id) => nameFor(id).trim().length > 0);
   const titleOk = !titleRequired || title.trim().length > 0;
   const missingField = config.contextFields.find((f) => f.required && !context[f.id]?.trim());
   // A field's own check (e.g. an age range), only once something has been typed.
@@ -79,12 +97,19 @@ export function SetupScreen({
         ? { message: invalidField.error!, inputId: `context-${invalidField.field.id}` }
         : !countOk
           ? { message: `Pick ${cast.min} or ${cast.max} ${cast.noun} to continue.` }
-          : !namesOk
-            ? { message: `Every one of your ${cast.noun} needs a name.` }
-            : null;
+          : !totalOk
+            ? { message: `This room fits ${maxTotal} people, guests included.` }
+            : !namesOk
+              ? { message: `Every one of your ${cast.noun} needs a name.` }
+              : null;
 
   function toggle(id: string) {
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < cast.max ? [...s, id] : s));
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : !full ? [...s, id] : s));
+    setGuests((g) => g.filter((x) => x !== id)); // a member can't also be a guest
+  }
+
+  function toggleGuest(id: string) {
+    setGuests((g) => (g.includes(id) ? g.filter((x) => x !== id) : g.length < (config.guests?.max ?? 0) && !roomFull ? [...g, id] : g));
   }
 
   /** Fill the form with the room's example and scroll back up to it. */
@@ -112,12 +137,17 @@ export function SetupScreen({
     const cleanContext = Object.fromEntries(
       config.contextFields.map((f) => [f.id, (context[f.id] ?? "").trim()]).filter(([, v]) => v),
     );
+    const used = new Set([...selected, ...guests]);
+    const custom = customs.filter((c) => used.has(c.id));
     onSave({
       title: title.trim() || config.title.default,
       participants: selected.map((id) => ({
         id,
-        name: (cast.renamable ? names[id].trim() : "") || personaById(config, id)!.name,
+        name: (cast.renamable ? nameFor(id).trim() : "") || personaOf(id)!.name,
       })),
+      ...(guests.length ? { guests: guests.map((id) => ({ id, name: personaOf(id)!.name })) } : {}),
+      // Copies of the user's own personas, so this room keeps working if they're later edited or deleted.
+      ...(custom.length ? { custom } : {}),
       language,
       context: cleanContext,
     });
@@ -183,7 +213,7 @@ export function SetupScreen({
           )}
         </legend>
         <ul className={`mt-3 grid gap-3 ${fixedCast ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-          {config.personas.map((persona) => {
+          {memberOptions.map((persona) => {
             const isSelected = selected.includes(persona.id);
             return (
               <PersonaCard
@@ -196,14 +226,33 @@ export function SetupScreen({
                 }
                 rename={
                   cast.renamable && isSelected
-                    ? { name: names[persona.id], onRename: (name) => setNames((n) => ({ ...n, [persona.id]: name })) }
+                    ? { name: nameFor(persona.id), onRename: (name) => setNames((n) => ({ ...n, [persona.id]: name })) }
                     : undefined
                 }
               />
             );
           })}
         </ul>
+        {config.customMembers && customs.length === 0 && (
+          <p className="mt-3 text-sm text-muted">
+            Want someone else in the group?{" "}
+            <Link href="/friends" className="font-semibold text-primary-deep underline underline-offset-4">
+              Build your own friend
+            </Link>
+          </p>
+        )}
       </fieldset>
+
+      {config.guests && (
+        <GuestPicker
+          config={config}
+          friends={customs.map(toPersona)}
+          memberIds={selected}
+          selected={guests}
+          canAddMore={guests.length < config.guests.max && !roomFull}
+          onToggle={toggleGuest}
+        />
+      )}
 
       <div className="mt-8">
         <LanguagePicker value={language} onChange={setLanguage} />

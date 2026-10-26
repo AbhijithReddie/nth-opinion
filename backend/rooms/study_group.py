@@ -126,6 +126,10 @@ def _finalize_notes(notes: StudyNotes, participants: list[dict]) -> dict:
 STUDY_GROUP = register_room(
     RoomConfig(
         id="study-group",
+        allows_guests=True,
+        max_guests=1,
+        guest_role="a guest classmate who joins the study session, asks or answers the occasional question in their "
+        "own style, and never takes over teaching or quizzing",
         title="Study Group",
         description="Learn a topic with a confused friend, the class topper and a meme-maker.",
         personas=PERSONAS,

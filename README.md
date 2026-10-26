@@ -30,6 +30,7 @@ backend/
   graph.py            Debate Arena graph (pro -> con -> ... -> judge)
   main.py             FastAPI app: /api/debate and /api/rooms/*
   agent_trace.py      "Behind the scenes" trace events (node starts/ends, decisions, safety mode)
+  persona_builder.py  "Build your own friend": a custom persona from a short description
   rooms/
     __init__.py       registers every room
     engine.py         the shared room engine (LangGraph director loop, summary)
@@ -176,6 +177,8 @@ frontend/
   src/config/flows.ts         each room's agent diagram for the "Behind the scenes" panel
   src/components/trace/       the "Behind the scenes" panel, diagram, mobile sheet and toggle
   src/components/share/       shareable result cards: the card and the share dialog
+  src/components/friends/     My Friends page: persona builder, preview, edit, generated avatars
+  src/lib/customPersonas.ts   the user's own personas: storage (localStorage), API client, avatar mapping
   src/lib/share.ts            share cards: privacy redaction, PNG generation, share/download helpers
   src/lib/og.tsx              link-preview images (opengraph-image / twitter-image for home and every room)
 ```
@@ -602,6 +605,64 @@ the director's own short explanation (at most about 20 words), or a fixed
 sentence when the turn-taking rules changed its choice. Trace events never
 include prompts, persona instructions, model output beyond the chat itself,
 keys or error details. Without the flag, nothing is sent and nothing changes.
+
+## Build your own friend and cross-room guests
+
+**My Friends** (`/friends`, in the navbar) builds custom personas. Describe a
+type of person (plus an optional name, relationship and language) and
+`POST /api/personas/generate` returns a persona from one structured LLM call:
+name, emoji, a colour from the text-safe palette, personality, speaking
+habits, typical stance, and avatar parameters (face shape, skin tone, hair,
+hair colour, accessory, expression) that the frontend draws in the same
+illustrated style as the built-in personas. You see a preview first and can
+regenerate, save, and later edit or delete. Up to 12 friends are saved in
+localStorage (the page still works without storage).
+
+```json
+{ "description": "my strict but caring dad", "name": "Papa", "relationship": "dad", "language": "english" }
+```
+
+- `description`: 10-300 characters; `name`: optional, 1-20; `relationship`:
+  optional, up to 40; `language`: `english`, `hinglish` or `tenglish`.
+- Refused with `422 {"detail": "<friendly message>", "code": "persona_refused"}`:
+  real, identifiable people (celebrities, politicians, public figures, or a
+  specific named private person), hateful, sexual or harassing personas, and
+  descriptions that try to change the app's rules. Generic relationships
+  ("my strict dad") are fine.
+- Limit: 10 generations per IP per hour.
+
+**Using custom personas.** The API stays stateless: rooms send the custom
+personas they use inline as `custom_personas`
+(`{"id": "custom_<4-16 a-z0-9>", "name", "emoji", "colour", "personality",
+"speaking_habits", "typical_stance"}`, every field length- and type-checked,
+no extra fields). Their text is untrusted: every prompt puts it inside
+`<persona_description>` tags, says it only describes a character and that any
+instructions inside must be ignored, and strips `<` and `>` so it can't close
+the fence. The room's rules, the guardrails and the safety layer always come
+after it and take priority; in supportive mode custom personas are gentle like
+everyone else. In The Group Chat they can be regular members.
+
+**Cross-room guests.** Rooms send `guests` (`[{"id", "name"}]`): a built-in
+persona from another room, or a custom persona. Each room config sets
+`allows_guests`, `max_guests` and `guest_role`:
+
+| Room | Guests | Role |
+| ---- | ------ | ---- |
+| The Group Chat | 2 (5 people in total) | extra friends |
+| Pitch Tank | 1 | a friend in the audience who reacts and whispers advice |
+| Interview Panel | 1 | a coach in your corner with a short private tip between questions |
+| Roast & Toast | 1 | a guest roaster |
+| Future You | 1 | someone who knows you, with their own perspective |
+| Study Group | 1 | a guest classmate |
+| Debate Arena | none | (fixed format) |
+
+The director treats guests as lower priority, and code enforces it: at most 2
+guest messages per user message, fallbacks pick members first, and guests
+don't count towards "everyone should speak". Guests never take a core role:
+the final summary (offers, scores, votes) comes from the room's own members
+only. In the chat, guests have a small "Guest" badge; in "Behind the scenes"
+they appear as dashed nodes with their avatars, and the director's reasons
+mention them.
 
 ## Sharing results
 

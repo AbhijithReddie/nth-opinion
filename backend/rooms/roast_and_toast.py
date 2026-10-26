@@ -152,6 +152,10 @@ def _finalize_scorecard(card: Scorecard, participants: list[dict]) -> dict:
 ROAST_AND_TOAST = register_room(
     RoomConfig(
         id="roast-and-toast",
+        allows_guests=True,
+        max_guests=1,
+        guest_role="a guest roaster who adds a roast or two in their own style, and joins in on real feedback when "
+        "the panel switches to it. The regular panel still gives the scorecard",
         title="Roast & Toast",
         description="Your resume or project gets roasted, then gets real feedback.",
         personas=PERSONAS,

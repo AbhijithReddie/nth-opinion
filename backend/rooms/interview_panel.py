@@ -126,6 +126,11 @@ def _finalize_interview(result: InterviewResult, participants: list[dict]) -> di
 INTERVIEW_PANEL = register_room(
     RoomConfig(
         id="interview-panel",
+        allows_guests=True,
+        max_guests=1,
+        guest_role="a coach in the candidate's corner: between questions, gives the candidate one short private tip "
+        "(addressed to @you, e.g. 'psst @you, ...'). Never asks interview questions and never scores or judges the "
+        "candidate",
         title="Interview Panel",
         description="HR, a tech lead and a skeptical manager interview you from your resume.",
         personas=PERSONAS,

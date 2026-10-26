@@ -74,7 +74,13 @@ function Person({ look, color }: { look: Look; color: string }) {
           <circle cx="44" cy="30.5" r="2.8" fill={skin} />
         </>
       )}
-      <ellipse cx="32" cy="29.5" rx="12" ry="13" fill={skin} />
+      {look.face === "round" ? (
+        <circle cx="32" cy="29.8" r="12.6" fill={skin} />
+      ) : look.face === "square" ? (
+        <rect x="20" y="16.8" width="24" height="25.6" rx="8" fill={skin} />
+      ) : (
+        <ellipse cx="32" cy="29.5" rx="12" ry="13" fill={skin} />
+      )}
       {(extras.has("stubble") || extras.has("beard")) && (
         <path
           d="M20.5 31c.5 9 5.5 12.5 11.5 12.5S43 40 43.5 31c-1.5 5-4.5 7.6-11.5 7.6S22 36 20.5 31Z"

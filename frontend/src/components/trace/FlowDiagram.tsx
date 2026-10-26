@@ -29,6 +29,8 @@ export function FlowDiagram({ flow, trace, persona }: { flow: Flow; trace: Trace
   const id = useId();
   const nodes = new Map(flow.nodes.map((n) => [n.id, n]));
   const activeLabel = flow.nodes.find((n) => n.id === trace.active)?.label;
+  // Five or six people (guests included) share one row: shorter names so they don't overlap.
+  const maxLabel = flow.nodes.filter((n) => n.personaId).length > 4 ? 8 : 14;
 
   return (
     <svg
@@ -84,8 +86,14 @@ export function FlowDiagram({ flow, trace, persona }: { flow: Flow; trace: Trace
                   cy={node.y}
                   r={AVATAR_R}
                   strokeWidth={active ? 2.5 : 1.5}
+                  strokeDasharray={node.guest ? "4 3" : undefined}
                   className={`fill-surface ${active ? "stroke-primary-deep" : "stroke-line-strong"}`}
                 />
+                {node.guest && (
+                  <text x={node.x} y={node.y - AVATAR_R - 5} textAnchor="middle" className="fill-muted text-[8px] font-semibold tracking-wider uppercase">
+                    Guest
+                  </text>
+                )}
                 {who && (
                   <foreignObject x={node.x - 17} y={node.y - 17} width={34} height={34}>
                     <PersonaFace look={who.look} color={who.color} className="size-[34px] rounded-full" />
@@ -116,7 +124,7 @@ export function FlowDiagram({ flow, trace, persona }: { flow: Flow; trace: Trace
               </>
             )}
             <text x={node.x} y={labelY} textAnchor="middle" className="fill-ink text-[11px] font-semibold">
-              {node.label.length > 14 ? `${node.label.slice(0, 13)}…` : node.label}
+              {node.label.length > maxLabel ? `${node.label.slice(0, maxLabel - 1)}…` : node.label}
             </text>
             {ms !== undefined && (
               <text

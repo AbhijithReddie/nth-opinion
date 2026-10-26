@@ -110,6 +110,14 @@ export function MobileMenu({ pathname }: { pathname: string }) {
                 </ul>
                 <div className="mt-3 border-t border-line pt-3">
                   <Link
+                    href="/friends"
+                    onClick={close}
+                    className={linkClass("/friends")}
+                    aria-current={pathname === "/friends" ? "page" : undefined}
+                  >
+                    My Friends
+                  </Link>
+                  <Link
                     href="/about"
                     onClick={close}
                     className={linkClass("/about")}

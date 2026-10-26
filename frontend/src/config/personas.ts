@@ -9,6 +9,8 @@
  */
 export interface AvatarLook {
   kind?: "person" | "bot";
+  /** Head shape (default oval). */
+  face?: "oval" | "round" | "square";
   /** Skin tone, 1 (lightest) to 5 (deepest). */
   skin?: 1 | 2 | 3 | 4 | 5;
   hair?: "short" | "side" | "spiky" | "curly" | "bob" | "long" | "wavy" | "bun" | "ponytail" | "pigtails" | "buzz" | "tousled";
@@ -32,8 +34,9 @@ export interface Persona {
 }
 
 // Text-safe persona colours, from the Chai & Sage palette and its neighbours.
-// Within a room no two personas share a colour.
-const C = {
+// Within a room no two personas share a colour. Custom personas pick from the same list
+// (backend/persona_builder.py has a copy).
+export const PERSONA_COLOURS = {
   ember: "#A0521D",
   rose: "#A8407F",
   teal: "#2D6B73",
@@ -43,6 +46,7 @@ const C = {
   sage: "#3F6B4E",
   terracotta: "#9A3B2A",
 } as const;
+const C = PERSONA_COLOURS;
 
 export const GROUP_CHAT_FRIENDS: Persona[] = [
   {

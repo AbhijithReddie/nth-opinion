@@ -4,6 +4,7 @@
  */
 
 import type { Language } from "@/config/roomChats";
+import type { CustomPersona } from "./customPersonas";
 import type { TraceEvent } from "./trace";
 
 export interface RoomParticipant {
@@ -20,6 +21,10 @@ export interface RoomSetup {
   language: Language;
   /** Answers to the room's context fields, by field id. */
   context: Record<string, string>;
+  /** Cross-room guests: built-in personas from other rooms, or the user's own. */
+  guests?: RoomParticipant[];
+  /** Copies of the user's own personas used here (as members or guests), sent with every request. */
+  custom?: CustomPersona[];
 }
 
 export interface ChatReaction {

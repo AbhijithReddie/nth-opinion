@@ -128,6 +128,11 @@ def _finalize_offers(result: Offers, participants: list[dict]) -> dict:
 SHARK_TANK = register_room(
     RoomConfig(
         id="shark-tank",
+        allows_guests=True,
+        max_guests=1,
+        guest_role="a friend of the founder sitting in the audience: reacts, cheers, and now and then whispers one "
+        "short piece of advice to the founder (addressed to @you). Never asks investor questions and never makes, "
+        "judges or negotiates offers",
         title="Shark Tank Pitch Room",
         description="Pitch your startup idea to 3 investors who grill you and make offers.",
         personas=PERSONAS,

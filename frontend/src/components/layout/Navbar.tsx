@@ -35,6 +35,9 @@ export function Navbar() {
             Home
           </Link>
           <RoomsMenu pathname={pathname} />
+          <Link href="/friends" className={linkClass("/friends")} aria-current={pathname === "/friends" ? "page" : undefined}>
+            My Friends
+          </Link>
           <Link href="/about" className={linkClass("/about")} aria-current={pathname === "/about" ? "page" : undefined}>
             About
           </Link>

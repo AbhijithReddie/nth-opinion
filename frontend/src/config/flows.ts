@@ -15,6 +15,8 @@ export interface FlowNode {
   y: number;
   /** A persona's avatar (with `personaId`), or a labelled box for the other steps. */
   personaId?: string;
+  /** A cross-room guest: drawn with a dashed ring. */
+  guest?: boolean;
 }
 
 export interface FlowEdge {
@@ -46,7 +48,8 @@ const EXPLAINERS: Record<FlowKind, string> = {
     "evidence and rebuttal. The diagram lights up each step as it happens.",
 };
 
-export function buildFlow(kind: FlowKind, people: { id: string; name: string }[]): Flow {
+/** `people` are the room's members, then any guests (flagged). */
+export function buildFlow(kind: FlowKind, people: { id: string; name: string; guest?: boolean }[]): Flow {
   if (kind === "debate") {
     const name = (id: string) => people.find((p) => p.id === id)?.name ?? id;
     return {
@@ -72,6 +75,7 @@ export function buildFlow(kind: FlowKind, people: { id: string; name: string }[]
     x: Math.round((300 * (i + 0.5)) / people.length),
     y: 140,
     personaId: p.id,
+    guest: p.guest,
   }));
   return {
     kind,

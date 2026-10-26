@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { DEBATERS, type Persona } from "@/config/personas";
-import { ROOM_CHATS } from "@/config/roomChats";
+import { resolvePersona, ROOM_CHATS } from "@/config/roomChats";
 import type { RoomMeta } from "@/config/rooms";
 import { SITE_TAGLINE } from "@/config/site";
 import type { SummaryData } from "@/lib/chatTypes";
@@ -120,8 +120,8 @@ function cardContent(result: ShareResult, safe: (text: string) => string, hide: 
 
   const { setup, summary, roomId } = result;
   const config = Object.values(ROOM_CHATS).find((c) => c.roomId === roomId);
-  const persona = (id: string) => config?.personas.find((p) => p.id === id);
-  const nameOf = (id: string) => setup.participants.find((p) => p.id === id)?.name ?? persona(id)?.name ?? "Someone";
+  const persona = (id: string) => (config ? resolvePersona(config, setup, id) : undefined);
+  const nameOf = (id: string) => [...setup.participants, ...(setup.guests ?? [])].find((p) => p.id === id)?.name ?? persona(id)?.name ?? "Someone";
   const who = (id: string) => ({ persona: persona(id), name: nameOf(id) });
   return roomContent(summary, setup.title, setup.context, who, safe, hide);
 }

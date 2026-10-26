@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { buildFlow } from "@/config/flows";
-import { personaById } from "@/config/roomChats";
+import { resolvePersona } from "@/config/roomChats";
 import { getRoom } from "@/config/rooms";
 import { useBehindTheScenes, useWideScreen } from "@/hooks/useBehindTheScenes";
 import type { RoomChatController } from "@/hooks/useRoomChat";
@@ -56,12 +56,13 @@ export function ChatScreen({
   const [behindTheScenes, setBehindTheScenes] = useBehindTheScenes();
   const wide = useWideScreen();
   const trace: TracePanelProps = {
-    flow: buildFlow(getRoom(config.roomId).flow, setup.participants),
+    flow: buildFlow(getRoom(config.roomId).flow, [...setup.participants, ...(setup.guests ?? []).map((g) => ({ ...g, guest: true }))]),
     trace: chat.trace,
     running: chat.replying,
     unavailable: traceUnavailable,
-    persona: (id) => personaById(config, id),
-    nameOf: (id) => setup.participants.find((p) => p.id === id)?.name ?? personaById(config, id)?.name ?? "Someone",
+    persona: (id) => resolvePersona(config, setup, id),
+    nameOf: (id) =>
+      [...setup.participants, ...(setup.guests ?? [])].find((p) => p.id === id)?.name ?? resolvePersona(config, setup, id)?.name ?? "Someone",
     onClose: () => setBehindTheScenes(false),
   };
 
