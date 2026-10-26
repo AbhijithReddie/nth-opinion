@@ -18,7 +18,7 @@ export function Reactions({ reactions, alignRight }: { reactions: ChatReaction[]
             key={emoji}
             title={label}
             aria-label={label}
-            className="animate-pop inline-flex items-center gap-1 rounded-full border border-white/10 bg-arena-800 px-1.5 py-0.5 text-xs shadow-md shadow-black/30"
+            className="animate-pop inline-flex items-center gap-1 rounded-full border border-line bg-surface px-1.5 py-0.5 text-xs shadow-soft"
           >
             <span aria-hidden>{emoji}</span>
             {names.length > 1 && <span className="font-mono text-[10px] text-muted">{names.length}</span>}

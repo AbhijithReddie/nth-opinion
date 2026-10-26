@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MESSAGE_MAX } from "@/config/roomChats";
 import { PollIcon, SendIcon } from "../icons";
 import { TypingIndicator } from "../TypingIndicator";
@@ -16,11 +16,15 @@ interface ComposerProps {
   labels: { summary: string; summaryLoading: string; placeholder: string; note: string };
   /** Rooms with modes: a button that switches to the other mode. */
   modeSwitch?: { label: string; onClick: () => void };
+  /** Text to start with, e.g. a room's example message. */
+  initialText?: string;
+  /** Focus the input on mount (after the text was filled in for the user). */
+  autoFocus?: boolean;
 }
 
 /** Message input (Enter sends, Shift+Enter for a new line), send button and the room's summary button. */
-export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels, modeSwitch }: ComposerProps) {
-  const [text, setText] = useState("");
+export function Composer({ onSend, onSummary, canSummarize, summarizing, replying, labels, modeSwitch, initialText = "", autoFocus = false }: ComposerProps) {
+  const [text, setText] = useState(initialText);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nearLimit = text.length > MESSAGE_MAX - 100;
 
@@ -34,6 +38,18 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
     el.style.overflowY = el.scrollHeight > 132 ? "auto" : "hidden";
   }
 
+  // Size the box for any starting text, and put the cursor at its end.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || !el.value) return;
+    el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+    el.style.overflowY = el.scrollHeight > 132 ? "auto" : "hidden";
+    if (autoFocus) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+  }, [autoFocus]);
+
   function submit(e?: FormEvent) {
     e?.preventDefault();
     if (onSend(text)) {
@@ -44,13 +60,13 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
   }
 
   return (
-    <div className="border-t border-white/[0.06] bg-arena-900/90 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-4">
+    <div className="border-t border-line bg-surface/95 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {modeSwitch && (
           <button
             type="button"
             onClick={modeSwitch.onClick}
-            className="inline-flex h-8 items-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-ink/85 transition hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+            className="inline-flex h-8 items-center rounded-full border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition hover:bg-sand focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
           >
             {modeSwitch.label}
           </button>
@@ -59,7 +75,7 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
           type="button"
           onClick={onSummary}
           disabled={!canSummarize || summarizing}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 px-3 text-xs font-semibold text-brand transition hover:bg-brand/20 focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/30 bg-primary-soft px-3 text-xs font-semibold text-primary-deep transition hover:border-primary/50 hover:bg-primary/15 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
           title={canSummarize ? undefined : "Send a message first"}
         >
           {summarizing ? (
@@ -95,10 +111,10 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
               // Enter sends; Shift+Enter adds a new line. Don't send mid-IME composition.
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) submit(e);
             }}
-            className="scroll-thin block max-h-33 min-h-11 w-full resize-none overflow-y-hidden rounded-2xl border border-white/10 bg-arena-950/80 px-4 py-2.5 text-base text-ink placeholder:text-faint focus:border-brand/50 focus:ring-2 focus:ring-brand/25 focus:outline-none sm:text-[15px]"
+            className="scroll-thin block max-h-33 min-h-11 w-full resize-none overflow-y-hidden rounded-2xl border border-line-strong bg-canvas px-4 py-2.5 text-base text-ink placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none sm:text-[15px]"
           />
           {nearLimit && (
-            <span className="pointer-events-none absolute right-3 -top-5 font-mono text-[10px] text-gold">
+            <span className="pointer-events-none absolute right-3 -top-5 font-mono text-[10px] text-judge-deep">
               {text.length}/{MESSAGE_MAX}
             </span>
           )}
@@ -107,7 +123,7 @@ export function Composer({ onSend, onSummary, canSummarize, summarizing, replyin
           type="submit"
           disabled={!text.trim()}
           aria-label="Send message"
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-brand text-arena-950 transition hover:bg-[#9d90ff] focus-visible:ring-2 focus-visible:ring-brand/70 focus-visible:ring-offset-2 focus-visible:ring-offset-arena-900 focus-visible:outline-none active:scale-95 disabled:bg-arena-600 disabled:text-muted"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_8px_20px_-10px_var(--color-primary)] transition hover:bg-primary-deep focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface focus-visible:outline-none active:scale-95 disabled:bg-sand-deep disabled:text-muted disabled:shadow-none"
         >
           <SendIcon className="size-5" />
         </button>

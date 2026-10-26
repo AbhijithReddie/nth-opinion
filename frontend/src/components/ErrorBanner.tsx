@@ -14,10 +14,10 @@ export function ErrorBanner({
   return (
     <div
       role="alert"
-      className="animate-fade-up flex flex-col gap-3 rounded-2xl border border-con/30 bg-con/[0.07] p-4 sm:flex-row sm:items-center"
+      className="animate-fade-up flex flex-col gap-3 rounded-2xl border border-con/40 bg-con-soft p-4 sm:flex-row sm:items-center"
     >
       <div className="flex flex-1 items-start gap-3">
-        <AlertIcon className="mt-0.5 size-5 shrink-0 text-con" />
+        <AlertIcon className="mt-0.5 size-5 shrink-0 text-con-deep" />
         <div>
           <p className="font-semibold text-ink">{title}</p>
           <p className="mt-0.5 text-sm text-muted">{message}</p>

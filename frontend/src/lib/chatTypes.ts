@@ -47,7 +47,7 @@ export interface Poll {
   votes: { friend_id: string; option: string; reason: string }[];
 }
 
-/** Shark Tank summary: "Ask for offers". */
+/** Pitch Tank summary: "Ask for offers". */
 export interface InvestorDecision {
   friend_id: string;
   decision: "offer" | "out";
@@ -103,15 +103,17 @@ export interface StudyNotes {
   next_topics: string[];
 }
 
-/** A room's final output, shown as a card in the chat. */
-export type SummaryItem = { kind: "summary"; id: string; ts: number } & (
+/** A room's final output: its type and data. */
+export type SummaryData =
   | { type: "poll"; data: Poll }
   | { type: "offers"; data: Offers }
   | { type: "scorecard"; data: Scorecard }
   | { type: "interview"; data: InterviewResult }
   | { type: "letters"; data: FutureLetters }
-  | { type: "notes"; data: StudyNotes }
-);
+  | { type: "notes"; data: StudyNotes };
+
+/** A room's final output, shown as a card in the chat. */
+export type SummaryItem = { kind: "summary"; id: string; ts: number } & SummaryData;
 
 /** A divider in the chat marking a switch between room modes (e.g. Roast -> Toast). */
 export interface ModeItem {

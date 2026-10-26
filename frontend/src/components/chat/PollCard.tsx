@@ -12,11 +12,11 @@ export function PollCard({ poll, ts }: { poll: Poll; ts: number }) {
   const top = Math.max(...counts);
 
   return (
-    <section aria-label="Group poll" className="rounded-2xl border border-brand/30 bg-arena-900 p-4 shadow-[0_10px_40px_-20px_var(--color-brand)]">
-      <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] text-brand uppercase">
+    <section aria-label="Group poll" className="rounded-2xl border border-accent/50 bg-surface p-4 text-left shadow-lift">
+      <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] text-accent-deep uppercase">
         <PollIcon className="size-3.5" /> Group vote · {formatTime(ts)}
       </p>
-      <h3 className="mt-1.5 font-display text-lg leading-snug font-bold">{poll.question}</h3>
+      <h3 className="mt-1.5 font-display text-lg leading-snug font-semibold">{poll.question}</h3>
 
       <ul className="mt-3 space-y-2">
         {poll.options.map((option, i) => {
@@ -25,7 +25,7 @@ export function PollCard({ poll, ts }: { poll: Poll; ts: number }) {
           return (
             <li key={option}>
               <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                <span className={winning ? "font-semibold text-ink" : "text-ink/80"}>{option}</span>
+                <span className={winning ? "font-semibold text-ink" : "text-ink"}>{option}</span>
                 <span className="font-mono text-xs text-muted">
                   {counts[i]} {counts[i] === 1 ? "vote" : "votes"}
                 </span>
@@ -36,10 +36,10 @@ export function PollCard({ poll, ts }: { poll: Poll; ts: number }) {
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={pct}
-                className="h-2 overflow-hidden rounded-full bg-white/[0.06]"
+                className="h-2 overflow-hidden rounded-full bg-sand"
               >
                 <div
-                  className={`animate-bar-grow h-full origin-left rounded-full ${winning ? "bg-linear-to-r from-brand to-cyan" : "bg-white/25"}`}
+                  className={`animate-bar-grow h-full origin-left rounded-full ${winning ? "bg-linear-to-r from-accent to-accent-deep" : "bg-line-strong"}`}
                   style={{ width: `${pct}%`, animationDelay: `${150 + i * 100}ms` }}
                 />
               </div>
@@ -48,7 +48,7 @@ export function PollCard({ poll, ts }: { poll: Poll; ts: number }) {
         })}
       </ul>
 
-      <ul className="mt-4 space-y-2 border-t border-white/[0.06] pt-3">
+      <ul className="mt-4 space-y-2 border-t border-line pt-3">
         {poll.votes.map((vote) => {
           const meta = persona(vote.friend_id);
           return meta ? (
@@ -57,8 +57,8 @@ export function PollCard({ poll, ts }: { poll: Poll; ts: number }) {
               <p className="min-w-0">
                 <span className="font-semibold">{nameOf(vote.friend_id)}</span>
                 <span className="text-muted"> voted </span>
-                <span className="font-semibold text-brand">{vote.option}</span>
-                <span className="block text-ink/75">&ldquo;{vote.reason}&rdquo;</span>
+                <span className="font-semibold text-accent-deep">{vote.option}</span>
+                <span className="block text-muted">&ldquo;{vote.reason}&rdquo;</span>
               </p>
             </li>
           ) : null;

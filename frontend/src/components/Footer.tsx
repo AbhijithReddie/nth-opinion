@@ -8,10 +8,10 @@ import { GitHubIcon } from "./icons";
 /** Site footer: brand, quick links, the disclaimer and tech credits. */
 export function Footer() {
   return (
-    <footer className="border-t border-white/[0.06] bg-arena-950/60">
+    <footer className="border-t border-line bg-sand/70">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <Link href="/" className="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none">
+          <Link href="/" className="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none">
             <LogoMark className="size-8" />
             <Wordmark className="text-lg" />
           </Link>
@@ -36,7 +36,7 @@ export function Footer() {
           </li>
         </FooterLinks>
       </div>
-      <div className="border-t border-white/[0.04]">
+      <div className="border-t border-line">
         <p className="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-faint sm:px-6 sm:text-left">
           Built with LangGraph, LangSmith, FastAPI and Next.js
         </p>

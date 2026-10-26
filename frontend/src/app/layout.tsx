@@ -1,23 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Figtree, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/config/site";
 import "./globals.css";
 
-// Geist for body text, Geist Mono for labels and scores, Bricolage Grotesque for headlines.
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Fraunces for headings, Figtree for body text and chat, IBM Plex Mono for scores and numbers.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
 });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 // Pages set their own `title` and `description`; the template adds " · Nth Opinion".
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07080c",
+  themeColor: "#fbf7f0",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -57,12 +58,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       // globals.css sets smooth scrolling; this tells Next.js to switch it off during route changes.
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${figtree.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="site-backdrop flex min-h-full flex-col">
         <a
           href="#main"
-          className="sr-only z-50 rounded-lg bg-brand px-3 py-2 text-arena-950 focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+          className="sr-only z-50 rounded-lg bg-primary px-3 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
           Skip to content
         </a>

@@ -1,56 +1,104 @@
 @import "tailwindcss";
 
 /*
- * Nth Opinion design system.
+ * Nth Opinion design system: "Chai & Sage", a warm light theme.
  *
- * Surfaces: a near-black "arena" scale (950 = page, 900 = cards, 800/700 = raised, 600 = borders/disabled).
- * Text:     ink (primary), muted (secondary), faint (labels, hints).
- * Brand:    violet, the speech bubble in the logo.
- * Accents:  cyan, coral and gold, the three AI figures in the logo. The Debate
- *           Arena maps Pro = cyan, Con = coral, Judge = gold.
- * Support:  a calm blue used only for safety / wellbeing messages.
+ * Every colour is defined once here, so Tailwind classes like `bg-sand`,
+ * `text-primary-deep`, `border-pro/40` or `fill-butter` work everywhere.
  *
- * Type:     Bricolage Grotesque for headlines (font-display), Geist for text,
- *           Geist Mono for small uppercase labels and numbers.
- * Shape:    rounded-xl controls, rounded-2xl cards, rounded-3xl panels.
- * Spacing:  pages use max-w-6xl (wide) or max-w-3xl (reading), px-4 sm:px-6.
+ * Surfaces: canvas (page), surface (cards), sand (sunken panels, hovers),
+ *           line / line-strong (borders).
+ * Text:     ink (primary), muted (secondary), faint (hints). All three pass
+ *           WCAG AA (4.5:1) on canvas, surface and sand.
+ * Palette:  terracotta, sage, lavender and butter. Each has
+ *             - the base colour, for fills and illustrations,
+ *             - `-deep`, a darker shade for text and solid buttons (AA on every surface,
+ *               and white text on it passes AA too),
+ *             - `-soft`, a pale tint for badges and tinted panels.
+ *           Butter and lavender are too light for white text: put ink text on them.
+ * Roles:    primary = terracotta, secondary = sage, accent = lavender, highlight = butter.
+ *           Debate Arena: Pro = sage, Con = terracotta, Judge = butter.
+ * Rooms:    each room has an accent (`room-*`) and a text-safe `room-*-ink`.
+ * Support:  a calm dusty blue, used only for safety / wellbeing messages.
  *
- * Every colour is a token, so Tailwind classes like `text-brand`, `bg-cyan/10`
- * or `border-pro/30` work everywhere.
+ * Type:     Fraunces for headings (font-display), Figtree for text and chat,
+ *           IBM Plex Mono for scores, numbers and small labels (font-mono).
+ * Shape:    rounded-xl controls, rounded-2xl cards, rounded-3xl panels, soft shadows.
  */
 @theme {
-  --color-arena-950: #07080c;
-  --color-arena-900: #0c0e14;
-  --color-arena-800: #12151e;
-  --color-arena-700: #1a1e2a;
-  --color-arena-600: #262b3a;
-  --color-ink: #eceef4;
-  --color-muted: #8d93a8;
-  --color-faint: #5b6175;
+  --color-canvas: #fbf7f0;
+  --color-surface: #ffffff;
+  --color-sand: #f3ece1;
+  --color-sand-deep: #e9dfcf;
+  --color-line: #e8dfd1;
+  --color-line-strong: #d6c8b3;
 
-  --color-brand: #8b7cff;
-  --color-brand-strong: #7563f0;
-  --color-brand-deep: #3b2f8f;
+  --color-ink: #2b2240;
+  --color-muted: #5e5670;
+  --color-faint: #6b6380;
 
-  --color-cyan: #2ee6d6;
-  --color-cyan-deep: #0e7c76;
-  --color-coral: #ff5c7a;
-  --color-coral-deep: #9b1f3a;
-  --color-gold: #f6c453;
-  --color-gold-deep: #8a6414;
-  --color-support: #7dd3fc;
+  --color-terracotta: #b84a36;
+  --color-terracotta-deep: #9a3b2a;
+  --color-terracotta-soft: #f7e4dd;
+  --color-sage: #6e9479;
+  --color-sage-deep: #3f6b4e;
+  --color-sage-soft: #e3ede5;
+  --color-lavender: #a895d8;
+  --color-lavender-deep: #5f4ba0;
+  --color-lavender-soft: #eee9f9;
+  --color-butter: #f2cf63;
+  --color-butter-deep: #7a5800;
+  --color-butter-soft: #fcf1cf;
+  --color-support: #3d6a8f;
+  --color-support-soft: #e4edf5;
+
+  /* Roles */
+  --color-primary: var(--color-terracotta);
+  --color-primary-deep: var(--color-terracotta-deep);
+  --color-primary-soft: var(--color-terracotta-soft);
+  --color-secondary: var(--color-sage);
+  --color-secondary-deep: var(--color-sage-deep);
+  --color-secondary-soft: var(--color-sage-soft);
+  --color-accent: var(--color-lavender);
+  --color-accent-deep: var(--color-lavender-deep);
+  --color-accent-soft: var(--color-lavender-soft);
+  --color-highlight: var(--color-butter);
+  --color-highlight-deep: var(--color-butter-deep);
+  --color-highlight-soft: var(--color-butter-soft);
 
   /* Debate Arena roles */
-  --color-pro: var(--color-cyan);
-  --color-pro-deep: var(--color-cyan-deep);
-  --color-con: var(--color-coral);
-  --color-con-deep: var(--color-coral-deep);
-  --color-judge: var(--color-gold);
-  --color-judge-deep: var(--color-gold-deep);
+  --color-pro: var(--color-sage);
+  --color-pro-deep: var(--color-sage-deep);
+  --color-pro-soft: var(--color-sage-soft);
+  --color-con: var(--color-terracotta);
+  --color-con-deep: var(--color-terracotta-deep);
+  --color-con-soft: var(--color-terracotta-soft);
+  --color-judge: var(--color-butter);
+  --color-judge-deep: var(--color-butter-deep);
+  --color-judge-soft: var(--color-butter-soft);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-bricolage), var(--font-geist-sans), sans-serif;
+  /* Room accents (fill) and their text-safe shades (ink) */
+  --color-room-debate: var(--color-butter);
+  --color-room-debate-ink: var(--color-butter-deep);
+  --color-room-group-chat: var(--color-lavender);
+  --color-room-group-chat-ink: var(--color-lavender-deep);
+  --color-room-pitch: var(--color-sage);
+  --color-room-pitch-ink: var(--color-sage-deep);
+  --color-room-interview: #8c86a6;
+  --color-room-interview-ink: #4f4868;
+  --color-room-future: #7b5ea7;
+  --color-room-future-ink: #6a4f9a;
+  --color-room-roast: var(--color-terracotta);
+  --color-room-roast-ink: var(--color-terracotta-deep);
+  --color-room-study: #9aae5b;
+  --color-room-study-ink: #4e6a26;
+
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-fraunces), Georgia, serif;
+
+  --shadow-soft: 0 1px 2px rgb(43 34 64 / 0.04), 0 6px 20px -10px rgb(43 34 64 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(43 34 64 / 0.04), 0 18px 40px -18px rgb(43 34 64 / 0.28);
 
   --animate-fade-up: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-fade-in: fade-in 0.2s ease-out both;
@@ -62,6 +110,7 @@
   --animate-gavel: gavel 1.6s ease-in-out infinite;
   --animate-shimmer: shimmer 1.8s linear infinite;
   --animate-pop: pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
 }
 
 @keyframes fade-up {
@@ -96,7 +145,7 @@
 @keyframes flash {
   0%,
   30% {
-    background-color: color-mix(in srgb, var(--color-brand) 22%, transparent);
+    background-color: color-mix(in srgb, var(--color-lavender) 30%, transparent);
   }
 }
 
@@ -143,6 +192,17 @@
   }
 }
 
+/* Speech bubbles in the illustrations bob gently. */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 @keyframes typing-dot {
   0%,
   80%,
@@ -157,33 +217,43 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   scroll-behavior: smooth;
 }
 
 body {
-  background-color: var(--color-arena-950);
+  background-color: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
 
-/* Page lighting: a violet glow behind the navbar plus faint cyan and coral corners. */
+::selection {
+  background-color: color-mix(in srgb, var(--color-butter) 60%, transparent);
+  color: var(--color-ink);
+}
+
+/* Page lighting: soft lavender, butter and sage blobs in the corners. */
 .site-backdrop {
   background:
-    radial-gradient(50rem 30rem at 50% -12%, color-mix(in srgb, var(--color-brand) 16%, transparent), transparent 65%),
-    radial-gradient(40rem 30rem at 0% 0%, color-mix(in srgb, var(--color-cyan) 7%, transparent), transparent 60%),
-    radial-gradient(40rem 30rem at 100% 0%, color-mix(in srgb, var(--color-coral) 7%, transparent), transparent 60%),
-    var(--color-arena-950);
+    radial-gradient(42rem 26rem at 8% -6%, color-mix(in srgb, var(--color-butter) 22%, transparent), transparent 70%),
+    radial-gradient(40rem 28rem at 96% 2%, color-mix(in srgb, var(--color-lavender) 18%, transparent), transparent 70%),
+    radial-gradient(36rem 26rem at 50% 108%, color-mix(in srgb, var(--color-sage) 12%, transparent), transparent 70%),
+    var(--color-canvas);
   background-attachment: fixed;
 }
 
-/* Faint grid that fades out, used behind heroes. */
-.arena-grid {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
+/* Faint dotted paper that fades out, used behind heroes and the chat. */
+.doodle-dots {
+  background-image: radial-gradient(color-mix(in srgb, var(--color-ink) 9%, transparent) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 25%, transparent 72%);
+}
+
+/* The chat's background: plain dotted paper, no fade. */
+.chat-paper {
+  background-color: var(--color-canvas);
+  background-image: radial-gradient(color-mix(in srgb, var(--color-ink) 6%, transparent) 1px, transparent 1.2px);
+  background-size: 22px 22px;
 }
 
 /* The three bouncing dots of the typing indicator. */
@@ -197,21 +267,21 @@ body {
   animation-delay: 0.3s;
 }
 
-/* Grey skeleton lines that shimmer while the judge deliberates. */
+/* Skeleton lines that shimmer butter-gold while the judge deliberates. */
 .shimmer-line {
   background: linear-gradient(
     90deg,
-    rgb(255 255 255 / 0.04) 0%,
-    color-mix(in srgb, var(--color-judge) 22%, transparent) 50%,
-    rgb(255 255 255 / 0.04) 100%
+    var(--color-sand) 0%,
+    color-mix(in srgb, var(--color-butter) 55%, var(--color-sand)) 50%,
+    var(--color-sand) 100%
   );
   background-size: 200% 100%;
 }
 
-/* Thin, dark scrollbars for inner scroll areas such as the chat. */
+/* Thin, warm scrollbars for inner scroll areas such as the chat. */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-arena-600) transparent;
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -13,11 +13,13 @@ interface DebateFormProps {
   error: string | null;
   onStart: (topic: string, rounds: number) => void;
   inputRef: RefObject<HTMLTextAreaElement | null>;
+  /** Topic to start with, e.g. from "Try this example". */
+  initialTopic?: string;
 }
 
 /** Topic input with a character counter, sample topics, rounds selector and Start button. */
-export function DebateForm({ running, error, onStart, inputRef }: DebateFormProps) {
-  const [topic, setTopic] = useState("");
+export function DebateForm({ running, error, onStart, inputRef, initialTopic = "" }: DebateFormProps) {
+  const [topic, setTopic] = useState(initialTopic);
   const [rounds, setRounds] = useState(2);
   const [inputError, setInputError] = useState<string | null>(null);
 
@@ -43,11 +45,12 @@ export function DebateForm({ running, error, onStart, inputRef }: DebateFormProp
 
   return (
     <form
+      id="debate-form"
       onSubmit={handleSubmit}
       noValidate
-      className="animate-fade-up mx-auto mt-12 max-w-3xl rounded-3xl border border-white/[0.08] bg-arena-900/80 p-4 shadow-2xl shadow-black/40 backdrop-blur [animation-delay:120ms] sm:p-6"
+      className="animate-fade-up mx-auto mt-12 max-w-3xl scroll-mt-24 rounded-3xl border border-line bg-surface p-4 shadow-lift [animation-delay:120ms] sm:p-6"
     >
-      <label htmlFor="topic" className="mb-2 block font-display text-lg font-bold">
+      <label htmlFor="topic" className="mb-2 block font-display text-lg font-semibold">
         What should they debate?
       </label>
       <div className="relative">
@@ -72,20 +75,20 @@ export function DebateForm({ running, error, onStart, inputRef }: DebateFormProp
               e.currentTarget.form?.requestSubmit();
             }
           }}
-          className={`block w-full resize-none rounded-2xl border bg-arena-950/80 px-4 pt-3 pb-8 text-base text-ink placeholder:text-faint transition focus:outline-none disabled:opacity-60 sm:text-lg ${
-            inputError ? "border-con/60 focus:ring-2 focus:ring-con/40" : "border-white/10 focus:border-judge/50 focus:ring-2 focus:ring-judge/25"
+          className={`block w-full resize-none rounded-2xl border bg-canvas px-4 pt-3 pb-8 text-base text-ink placeholder:text-faint transition focus:outline-none disabled:opacity-60 sm:text-lg ${
+            inputError ? "border-con/60 focus:ring-2 focus:ring-con/30" : "border-line-strong focus:border-judge-deep/60 focus:ring-2 focus:ring-judge/40"
           }`}
         />
         <span
           id="topic-counter"
           className={`pointer-events-none absolute right-3 bottom-2.5 font-mono text-xs ${
-            nearLimit ? "text-judge" : length > 0 && length < TOPIC_MIN ? "text-con" : "text-faint"
+            nearLimit ? "text-judge-deep" : length > 0 && length < TOPIC_MIN ? "text-con-deep" : "text-faint"
           }`}
         >
           {topic.length}/{TOPIC_MAX}
         </span>
       </div>
-      <p id="topic-error" role="alert" className="min-h-5 pt-1.5 text-sm text-con">
+      <p id="topic-error" role="alert" className="min-h-5 pt-1.5 text-sm text-con-deep">
         {inputError}
       </p>
 
@@ -99,12 +102,12 @@ export function DebateForm({ running, error, onStart, inputRef }: DebateFormProp
         />
       </div>
 
-      <div className="mt-6 flex flex-col gap-4 border-t border-white/[0.06] pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-6 flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
         <RoundsSelector value={rounds} onChange={setRounds} disabled={running} />
         <button
           type="submit"
           disabled={running}
-          className="group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl bg-linear-to-r from-pro via-judge to-con px-7 font-display text-base font-extrabold text-arena-950 transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-judge focus-visible:ring-offset-2 focus-visible:ring-offset-arena-900 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:from-arena-600 disabled:via-arena-600 disabled:to-arena-600 disabled:text-muted"
+          className="group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-xl border border-judge-deep/30 bg-judge px-7 font-display text-base font-semibold text-ink shadow-[0_10px_24px_-12px_var(--color-judge-deep)] transition hover:bg-[color-mix(in_srgb,var(--color-judge)_85%,var(--color-judge-deep))] focus-visible:ring-2 focus-visible:ring-judge-deep focus-visible:ring-offset-2 focus-visible:ring-offset-surface focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-sand-deep disabled:text-muted disabled:shadow-none"
         >
           {running ? (
             <>

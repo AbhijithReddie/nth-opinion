@@ -1,8 +1,8 @@
 import { useId } from "react";
 
 /**
- * The Nth Opinion logo mark: a human at the centre with three AI figures (cyan,
- * coral, gold) around them in a semicircle, inside a speech bubble.
+ * The Nth Opinion logo mark: a human at the centre with three AI figures (sage,
+ * lavender, butter) around them in a semicircle, inside a terracotta speech bubble.
  * Same artwork as public/nth-opinion-icon.svg, inlined so it renders crisply and
  * needs no extra request.
  */
@@ -14,18 +14,18 @@ export function LogoMark({ className, title }: { className?: string; title?: str
       {title && <title>{title}</title>}
       <defs>
         <linearGradient id={gradientId} x1="8" y1="2" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#9D8FFF" />
-          <stop offset="1" stopColor="#5A47D6" />
+          <stop offset="0" stopColor="#C95A44" />
+          <stop offset="1" stopColor="#9A3B2A" />
         </linearGradient>
       </defs>
       <path
         fill={`url(#${gradientId})`}
         d="M18 2H46A14 14 0 0 1 60 16V38A14 14 0 0 1 46 52H26L14 61L18 52A14 14 0 0 1 4 38V16A14 14 0 0 1 18 2Z"
       />
-      <AiFigure x={15} y={25} color="#2EE6D6" shoulders={[16, 12.5, 10.5]} />
-      <AiFigure x={32} y={11} color="#FF5C7A" shoulders={[14, 11, 9.5]} />
-      <AiFigure x={49} y={25} color="#F6C453" shoulders={[16, 12.5, 10.5]} />
-      <g fill="#FFFFFF">
+      <AiFigure x={15} y={25} color="#A9CDB3" shoulders={[16, 12.5, 10.5]} />
+      <AiFigure x={32} y={11} color="#D3C6F2" shoulders={[14, 11, 9.5]} />
+      <AiFigure x={49} y={25} color="#F2CF63" shoulders={[16, 12.5, 10.5]} />
+      <g fill="#FFF8EE">
         <circle cx="32" cy="33" r="6" />
         <path d="M21 50C21 43 26 40.5 32 40.5S43 43 43 50Z" />
       </g>
@@ -45,8 +45,8 @@ function AiFigure({ x, y, color, shoulders }: { x: number; y: number; color: str
       <circle cx={x} cy={y - 4.7} r="1.9" />
       <rect x={x - 4.5} y={y} width="9" height="8" rx="2.6" />
       <path d={`M${x - 5} ${bottom}C${x - 5} ${ctrl} ${x - 3} ${top} ${x} ${top}S${x + 5} ${ctrl} ${x + 5} ${bottom}Z`} />
-      <circle cx={x - 1.8} cy={y + 4} r="1" fill="#231A5C" />
-      <circle cx={x + 1.8} cy={y + 4} r="1" fill="#231A5C" />
+      <circle cx={x - 1.8} cy={y + 4} r="1" fill="#2B2240" />
+      <circle cx={x + 1.8} cy={y + 4} r="1" fill="#2B2240" />
     </g>
   );
 }

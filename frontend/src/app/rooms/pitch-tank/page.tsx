@@ -3,6 +3,7 @@ import { RoomChatLoader } from "@/components/chat/RoomChatLoader";
 import { getRoom } from "@/config/rooms";
 import { SITE_NAME } from "@/config/site";
 
+// The backend room id is still "shark-tank".
 const room = getRoom("shark-tank");
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   openGraph: { title: `${room.title} · ${SITE_NAME}`, description: room.description, url: room.href },
 };
 
-/** /rooms/shark-tank. No footer: the pitch room fills the screen like a messaging app. */
-export default function SharkTankPage() {
+/** /rooms/pitch-tank (the old /rooms/shark-tank redirects here). No footer: the pitch room fills the screen like a messaging app. */
+export default function PitchTankPage() {
   return <RoomChatLoader roomId="shark-tank" />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * All state and actions for a chat room (Group Chat, Shark Tank, ...).
+ * All state and actions for a chat room (Group Chat, Pitch Tank, ...).
  *
  * - The room setup and the chat are saved to localStorage (safely: the page
  *   still works if storage is blocked).

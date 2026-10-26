@@ -14,17 +14,17 @@ export function Navbar() {
   const pathname = usePathname();
 
   const linkClass = (href: string) =>
-    `inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition hover:bg-white/[0.06] hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none ${
+    `inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition hover:bg-sand hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none ${
       pathname === href ? "text-ink" : "text-muted"
     }`;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-arena-950/75 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur-xl">
       {/* h-16 (4rem): full-height pages such as the chat subtract this. */}
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+          className="flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
         >
           <LogoMark className="size-9 shrink-0" />
           <Wordmark className="text-lg sm:text-xl" />

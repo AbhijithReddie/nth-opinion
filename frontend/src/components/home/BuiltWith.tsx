@@ -9,15 +9,15 @@ export const TECH_STACK = [
 export function BuiltWith() {
   return (
     <section aria-labelledby="built-title" className="py-16 sm:py-20">
-      <div className="rounded-3xl border border-white/[0.07] bg-arena-900/60 p-6 sm:p-10">
-        <p className="font-mono text-[11px] tracking-[0.2em] text-brand uppercase">Under the hood</p>
-        <h2 id="built-title" className="mt-2 font-display text-2xl font-extrabold sm:text-3xl">
+      <div className="relative overflow-hidden rounded-3xl border border-line bg-surface p-6 shadow-soft sm:p-10">
+        <p className="font-mono text-[11px] tracking-[0.2em] text-primary-deep uppercase">Under the hood</p>
+        <h2 id="built-title" className="mt-2 font-display text-2xl font-semibold sm:text-3xl">
           Built with LangGraph, LangSmith, FastAPI and Next.js
         </h2>
         <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TECH_STACK.map((t) => (
-            <li key={t.name} className="rounded-2xl border border-white/[0.06] bg-arena-950/60 p-4">
-              <p className="font-display font-bold">{t.name}</p>
+            <li key={t.name} className="rounded-2xl border border-line bg-canvas p-4">
+              <p className="font-display text-lg font-semibold">{t.name}</p>
               <p className="mt-1 text-sm text-muted">{t.role}</p>
             </li>
           ))}

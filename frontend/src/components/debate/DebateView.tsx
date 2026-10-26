@@ -65,8 +65,8 @@ export function DebateView({ state, onNewDebate, onRetry }: DebateViewProps) {
         <div className="hidden grid-cols-2 gap-5 md:grid" aria-hidden>
           {(["pro", "con"] as Speaker[]).map((s) => (
             <div key={s} className="flex items-center gap-3 px-1">
-              <span className={`font-display text-lg font-extrabold ${SIDES[s].text}`}>{SIDES[s].label}</span>
-              <span className="text-sm text-faint">{SIDES[s].stance} the motion</span>
+              <span className={`font-display text-lg font-semibold ${SIDES[s].text}`}>{SIDES[s].label}</span>
+              <span className="text-sm text-muted">{SIDES[s].stance} the motion</span>
               <span className={`h-px flex-1 ${SIDES[s].bar} opacity-30`} />
             </div>
           ))}
@@ -96,7 +96,7 @@ export function DebateView({ state, onNewDebate, onRetry }: DebateViewProps) {
           <button
             type="button"
             onClick={onRetry}
-            className="inline-flex h-10 items-center rounded-xl bg-con px-4 text-sm font-semibold text-arena-950 transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-con/60 focus-visible:outline-none"
+            className="inline-flex h-10 items-center rounded-xl bg-con-deep px-4 text-sm font-semibold text-white transition hover:bg-ink focus-visible:ring-2 focus-visible:ring-con/60 focus-visible:outline-none"
           >
             Try again
           </button>

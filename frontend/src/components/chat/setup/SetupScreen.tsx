@@ -2,8 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { personaById, type Language, type RoomChatConfig } from "@/config/roomChats";
+import { getRoom } from "@/config/rooms";
 import type { RoomSetup } from "@/lib/chatTypes";
+import { BackdropBlobs } from "../../illustrations/Decor";
+import { RoomIllustration } from "../../illustrations/RoomIllustration";
+import { SampleSection } from "../../rooms/SampleSection";
 import { Button } from "../../ui/Button";
+import { RoomSample } from "../RoomSample";
 import { LanguagePicker } from "./LanguagePicker";
 import { PersonaCard } from "./PersonaCard";
 import { TextField } from "./TextField";
@@ -11,21 +16,28 @@ import { TextField } from "./TextField";
 /**
  * Create (or edit) a room: the title, the room's extra details (context fields),
  * the cast (picked and renamed, or a fixed panel), and the language.
+ * Below the form, "See it in action" shows the room's sample conversation; its
+ * "Try this example" button fills the form, and the example's first message is
+ * handed to the chat (via `onDraft`) when the room is created.
  */
 export function SetupScreen({
   config,
   initial,
   onSave,
   onCancel,
+  onDraft,
 }: {
   config: RoomChatConfig;
   initial: RoomSetup | null;
   onSave: (setup: RoomSetup) => void;
   /** Present when editing an existing room. */
   onCancel?: () => void;
+  /** Called on save with the message to pre-fill in the chat ("" if none). */
+  onDraft?: (message: string) => void;
 }) {
   const { cast, copy } = config;
-  const fixedCast = cast.min === config.personas.length; // e.g. Shark Tank: always all three investors
+  const room = getRoom(config.roomId);
+  const fixedCast = cast.min === config.personas.length; // e.g. Pitch Tank: always all three investors
   const titleRequired = !!config.title.contextKey;
 
   const [title, setTitle] = useState(initial?.title ?? config.title.default);
@@ -50,6 +62,8 @@ export function SetupScreen({
     .find((x) => x.error);
   // Set when "Start" is pressed with something missing: the message turns red.
   const [attempted, setAttempted] = useState(false);
+  // The example's first message, once "Try this example" has filled the form.
+  const [exampleDraft, setExampleDraft] = useState("");
 
   // What's stopping the user, and which input to jump to. Labels are quoted as written
   // ("What do you want to learn?"), since they can be questions or instructions.
@@ -69,6 +83,17 @@ export function SetupScreen({
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < cast.max ? [...s, id] : s));
   }
 
+  /** Fill the form with the room's example and scroll back up to it. */
+  function tryExample() {
+    const { fill } = room.example;
+    setTitle(fill.title ?? config.title.default);
+    setContext({ ...fill.context });
+    setAttempted(false);
+    setExampleDraft(fill.message);
+    document.getElementById("room-title")?.focus({ preventScroll: true });
+    document.getElementById("setup-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function submit(e: FormEvent) {
     e.preventDefault();
     if (blocker) {
@@ -77,6 +102,9 @@ export function SetupScreen({
       if (blocker.inputId) document.getElementById(blocker.inputId)?.focus();
       return;
     }
+    // Only carry the example's message over if the form still holds the example.
+    const exampleTitle = room.example.fill.title ?? config.title.default;
+    onDraft?.(exampleDraft && title.trim() === exampleTitle.trim() ? exampleDraft : "");
     const cleanContext = Object.fromEntries(
       config.contextFields.map((f) => [f.id, (context[f.id] ?? "").trim()]).filter(([, v]) => v),
     );
@@ -92,16 +120,29 @@ export function SetupScreen({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="animate-fade-up mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className="relative">
+    <BackdropBlobs className="h-[28rem]" />
+    <form id="setup-top" onSubmit={submit} noValidate className="animate-fade-up mx-auto w-full max-w-3xl scroll-mt-20 px-4 py-10 sm:px-6 sm:py-14">
       <header className="text-center">
-        <p className="font-mono text-[11px] tracking-[0.2em] text-brand uppercase">{copy.eyebrow}</p>
-        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+        <RoomIllustration roomId={config.roomId} className="mx-auto max-w-[16rem] sm:max-w-xs" />
+        <p className="mt-4 font-mono text-[11px] tracking-[0.2em] uppercase" style={{ color: room.accentInk }}>
+          {copy.eyebrow}
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
           {initial ? copy.editHeading : copy.heading}
         </h1>
         <p className="mx-auto mt-2 max-w-md text-muted">{copy.intro}</p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+          <Button variant="secondary" size="sm" onClick={tryExample}>
+            Try this example
+          </Button>
+          <a href="#sample" className="rounded-lg px-2 py-1.5 font-semibold text-primary-deep underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none">
+            See a sample conversation ↓
+          </a>
+        </div>
       </header>
 
-      <div className="mt-8 space-y-6">
+      <div className="mt-8 space-y-6 rounded-3xl border border-line bg-surface p-5 shadow-soft sm:p-6">
         <TextField
           id="room-title"
           label={config.title.label}
@@ -130,9 +171,9 @@ export function SetupScreen({
 
       <fieldset className="mt-8">
         <legend className="flex w-full items-baseline justify-between gap-3">
-          <span className="font-display text-lg font-bold">{cast.heading}</span>
+          <span className="font-display text-lg font-semibold">{cast.heading}</span>
           {!fixedCast && (
-            <span aria-live="polite" className={`font-mono text-xs ${countOk ? "text-cyan" : "text-faint"}`}>
+            <span aria-live="polite" className={`font-mono text-xs ${countOk ? "text-pro-deep" : "text-muted"}`}>
               {selected.length}/{cast.max} picked{full ? " · full" : ""}
             </span>
           )}
@@ -165,7 +206,7 @@ export function SetupScreen({
       </div>
 
       <div className="mt-10 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <p id="setup-status" className={`text-sm sm:mr-auto ${blocker && attempted ? "text-coral" : "text-faint"}`} role="status">
+        <p id="setup-status" className={`text-sm sm:mr-auto ${blocker && attempted ? "font-medium text-con-deep" : "text-muted"}`} role="status">
           {blocker?.message ?? "Ready when you are."}
         </p>
         {onCancel && (
@@ -178,5 +219,12 @@ export function SetupScreen({
         </Button>
       </div>
     </form>
+
+    <div className="mx-auto w-full max-w-3xl px-4 pb-16 sm:px-6">
+      <SampleSection room={room} onTry={tryExample}>
+        <RoomSample config={config} example={room.example} />
+      </SampleSection>
+    </div>
+    </div>
   );
 }

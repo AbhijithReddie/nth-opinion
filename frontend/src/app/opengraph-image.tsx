@@ -22,21 +22,21 @@ export default async function OpenGraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "radial-gradient(circle at 50% 0%, #2a2160 0%, #07080c 70%)",
-          color: "#eceef4",
+          background: "radial-gradient(circle at 15% 0%, #fcf1cf 0%, transparent 45%), radial-gradient(circle at 90% 10%, #eee9f9 0%, transparent 45%), #fbf7f0",
+          color: "#2b2240",
           fontFamily: "sans-serif",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={iconSrc} width={220} height={220} alt="" />
         {/* Wordmark: "N" + raised "th" + "Opinion", top-aligned so "th" sits like an ordinal superscript */}
-        <div style={{ marginTop: 28, display: "flex", alignItems: "flex-start", fontSize: 96, fontWeight: 800, letterSpacing: -3 }}>
+        <div style={{ marginTop: 28, display: "flex", alignItems: "flex-start", fontSize: 96, fontWeight: 700, letterSpacing: -3 }}>
           <span>N</span>
           <span style={{ fontSize: 46, marginTop: 18, marginLeft: 2, letterSpacing: 0 }}>th</span>
           <span style={{ marginLeft: 24 }}>Opinion</span>
         </div>
-        <div style={{ marginTop: 8, fontSize: 40, color: "#8d93a8" }}>{SITE_TAGLINE}</div>
-        <div style={{ marginTop: 6, fontSize: 30, color: "#5d6378" }}>{SITE_EXPLAINER}</div>
+        <div style={{ marginTop: 8, fontSize: 40, color: "#9a3b2a" }}>{SITE_TAGLINE}</div>
+        <div style={{ marginTop: 6, fontSize: 30, color: "#5e5670" }}>{SITE_EXPLAINER}</div>
       </div>
     ),
     size,

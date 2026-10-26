@@ -2,8 +2,11 @@ import { useRoom } from "./RoomContext";
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Message text with @mentions highlighted: personas in their colour, "@you" in the brand colour. */
-export function MessageText({ text }: { text: string }) {
+/**
+ * Message text with @mentions highlighted: personas in their colour, "@you" in terracotta.
+ * `inverse` is for the user's own terracotta bubble, where mentions are white and underlined instead.
+ */
+export function MessageText({ text, inverse = false }: { text: string; inverse?: boolean }) {
   const { setup, persona } = useRoom();
 
   // Match chosen names and default names (longest first, so "@Big Bro" wins over "@Big").
@@ -24,12 +27,19 @@ export function MessageText({ text }: { text: string }) {
       {parts.map((part, i) => {
         if (i % 2 === 0) return part; // plain text between mentions
         const color = targets.get(part.slice(1).toLowerCase());
+        if (inverse) {
+          return (
+            <span key={i} className="font-semibold underline decoration-white/60 underline-offset-2">
+              {part}
+            </span>
+          );
+        }
         return color ? (
           <span key={i} className="rounded px-0.5 font-semibold" style={{ color, backgroundColor: `${color}1f` }}>
             {part}
           </span>
         ) : (
-          <span key={i} className="rounded bg-brand/20 px-0.5 font-semibold text-brand">
+          <span key={i} className="rounded bg-primary-soft px-0.5 font-semibold text-primary-deep">
             {part}
           </span>
         );

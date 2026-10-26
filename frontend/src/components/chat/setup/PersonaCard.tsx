@@ -23,9 +23,9 @@ export function PersonaCard({ persona, selection, rename }: PersonaCardProps) {
 
   const body = (
     <>
-      <Avatar persona={persona} size="md" />
+      <Avatar persona={persona} size="lg" />
       <span className="min-w-0 flex-1">
-        <span className="block font-display font-bold" style={{ color: active ? persona.color : undefined }}>
+        <span className="block font-display text-lg font-semibold" style={{ color: active ? persona.color : undefined }}>
           {persona.name}
         </span>
         <span className="mt-0.5 block text-[13px] leading-snug text-muted">{persona.tagline}</span>
@@ -35,10 +35,10 @@ export function PersonaCard({ persona, selection, rename }: PersonaCardProps) {
 
   return (
     <li
-      className={`flex flex-col rounded-2xl border transition ${active ? "bg-arena-800" : "border-white/[0.07] bg-arena-900/70"} ${
-        selection?.disabled ? "opacity-45" : ""
+      className={`flex flex-col rounded-2xl border transition ${active ? "bg-surface" : "border-line bg-surface/60"} ${
+        selection?.disabled ? "opacity-55" : ""
       }`}
-      style={active ? { borderColor: `${persona.color}80`, boxShadow: `0 0 30px -14px ${persona.color}` } : undefined}
+      style={active ? { borderColor: `${persona.color}80`, boxShadow: `0 10px 26px -16px ${persona.color}` } : undefined}
     >
       {selection ? (
         <button
@@ -46,13 +46,13 @@ export function PersonaCard({ persona, selection, rename }: PersonaCardProps) {
           aria-pressed={selection.selected}
           disabled={selection.disabled}
           onClick={selection.onToggle}
-          className="flex flex-1 items-start gap-3 rounded-2xl p-3.5 text-left focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none disabled:cursor-not-allowed"
+          className="flex flex-1 items-start gap-3 items-center rounded-2xl p-3.5 text-left focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none disabled:cursor-not-allowed"
         >
           {body}
           <span
             aria-hidden
             className={`grid size-6 shrink-0 place-items-center rounded-full border transition ${
-              selection.selected ? "border-transparent text-arena-950" : "border-white/20 text-transparent"
+              selection.selected ? "border-transparent text-white" : "border-line-strong bg-surface text-transparent"
             }`}
             style={selection.selected ? { backgroundColor: persona.color } : undefined}
           >
@@ -60,12 +60,12 @@ export function PersonaCard({ persona, selection, rename }: PersonaCardProps) {
           </span>
         </button>
       ) : (
-        <div className="flex flex-1 items-start gap-3 p-3.5">{body}</div>
+        <div className="flex flex-1 items-center gap-3 p-3.5">{body}</div>
       )}
 
       {rename && (
         <div className="px-3.5 pb-3.5">
-          <label htmlFor={`rename-${persona.id}`} className="mb-1 block text-[11px] font-medium text-faint">
+          <label htmlFor={`rename-${persona.id}`} className="mb-1 block text-[11px] font-medium text-muted">
             Call them
           </label>
           <input
@@ -75,8 +75,8 @@ export function PersonaCard({ persona, selection, rename }: PersonaCardProps) {
             onChange={(e) => rename.onRename(e.target.value)}
             aria-invalid={nameEmpty || undefined}
             placeholder={persona.name}
-            className={`h-9 w-full rounded-lg border bg-arena-950/80 px-3 text-sm text-ink placeholder:text-faint focus:ring-2 focus:outline-none ${
-              nameEmpty ? "border-coral/60 focus:ring-coral/30" : "border-white/10 focus:border-brand/50 focus:ring-brand/25"
+            className={`h-9 w-full rounded-lg border bg-canvas px-3 text-sm text-ink placeholder:text-faint focus:ring-2 focus:outline-none ${
+              nameEmpty ? "border-con/60 focus:ring-con/30" : "border-line-strong focus:border-primary focus:ring-primary/20"
             }`}
           />
         </div>

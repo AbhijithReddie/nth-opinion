@@ -23,7 +23,7 @@ export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string
   }
 
   const itemClass =
-    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none";
+    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-sand focus-visible:bg-sand focus-visible:outline-none";
 
   return (
     <div className="relative">
@@ -38,7 +38,7 @@ export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string
           setOpen((o) => !o);
           requestAnimationFrame(() => menuRef.current?.querySelector("button")?.focus());
         }}
-        className="grid size-10 place-items-center rounded-xl text-muted transition hover:bg-white/[0.06] hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+        className="grid size-10 place-items-center rounded-xl text-muted transition hover:bg-sand hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
       >
         <MoreIcon className="size-5" />
       </button>
@@ -55,7 +55,7 @@ export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string
             const next = (items.indexOf(document.activeElement as HTMLButtonElement) + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
             items[next]?.focus();
           }}
-          className="animate-fade-in absolute top-full right-0 z-20 mt-1 w-52 rounded-xl border border-white/[0.08] bg-arena-800 p-1 shadow-2xl shadow-black/60"
+          className="animate-fade-in absolute top-full right-0 z-20 mt-1 w-52 rounded-xl border border-line bg-surface p-1 shadow-lift"
         >
           <li role="none">
             <button type="button" role="menuitem" onClick={() => choose(onEdit)} className={itemClass}>
@@ -63,7 +63,7 @@ export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string
             </button>
           </li>
           <li role="none">
-            <button type="button" role="menuitem" onClick={() => choose(onClearChat)} className={`${itemClass} text-coral`}>
+            <button type="button" role="menuitem" onClick={() => choose(onClearChat)} className={`${itemClass} text-con-deep`}>
               <TrashIcon className="size-4" /> Clear chat
             </button>
           </li>

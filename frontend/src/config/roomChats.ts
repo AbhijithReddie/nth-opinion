@@ -144,7 +144,7 @@ export const ROOM_CHATS = {
       },
     ],
     copy: {
-      eyebrow: "Shark Tank Pitch Room",
+      eyebrow: "Pitch Tank",
       heading: "Step into the tank",
       editHeading: "Edit your pitch details",
       intro: "Three investors will grill you on your startup, then decide whether to make you an offer.",
@@ -153,7 +153,7 @@ export const ROOM_CHATS = {
       emptyTitle: "The panel is ready for {title}",
       emptyIntro: "Pitch to {names}. Cover the problem, your solution, traction and why you. For example:",
       starters: [
-        "Hi Sharks! We solve ... for ..., and we've made ₹... in revenue so far.",
+        "Hi everyone! We solve ... for ..., and we've made ₹... in revenue so far.",
         "Our customers are ..., they pay ₹... per month, and we're growing ...% month on month.",
       ],
     },

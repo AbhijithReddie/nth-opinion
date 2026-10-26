@@ -22,21 +22,21 @@ export function ChatHeader({
   const status = typingNames.length ? typingLabel(typingNames) : `${setup.participants.map((p) => p.name).join(", ")}, You`;
 
   return (
-    <header className="flex items-center gap-3 border-b border-white/[0.06] bg-arena-900/90 px-3 py-2.5 backdrop-blur sm:px-4">
+    <header className="flex items-center gap-3 border-b border-line bg-surface/90 px-3 py-2.5 backdrop-blur sm:px-4">
       <div className="flex -space-x-2.5" aria-hidden>
         {setup.participants.map((p) => {
           const meta = persona(p.id);
-          return meta ? <Avatar key={p.id} persona={meta} className="ring-2 ring-arena-900" /> : null;
+          return meta ? <Avatar key={p.id} persona={meta} className="ring-2 ring-surface" /> : null;
         })}
       </div>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate font-display text-base leading-tight font-bold sm:text-lg">{setup.title}</h1>
-        <p aria-live="polite" className={`truncate text-xs ${typingNames.length ? "text-cyan" : "text-muted"}`}>
+        <h1 className="truncate font-display text-base leading-tight font-semibold sm:text-lg">{setup.title}</h1>
+        <p aria-live="polite" className={`truncate text-xs ${typingNames.length ? "font-medium text-pro-deep" : "text-muted"}`}>
           {status}
         </p>
       </div>
       {modeLabel && (
-        <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold" aria-label={`Mode: ${modeLabel}`}>
+        <span className="shrink-0 rounded-full border border-line-strong bg-sand px-2.5 py-1 text-xs font-semibold" aria-label={`Mode: ${modeLabel}`}>
           {modeLabel}
         </span>
       )}

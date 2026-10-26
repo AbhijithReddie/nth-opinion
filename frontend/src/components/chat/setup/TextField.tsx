@@ -1,5 +1,5 @@
 const INPUT_CLASS =
-  "w-full rounded-xl border border-white/10 bg-arena-950/80 px-4 text-base text-ink placeholder:text-faint focus:border-brand/50 focus:ring-2 focus:ring-brand/25 focus:outline-none";
+  "w-full rounded-xl border border-line-strong bg-surface px-4 shadow-[inset_0_1px_2px_rgb(43_34_64/0.04)] text-base text-ink placeholder:text-faint focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none";
 
 /** A labelled input for the setup screen (room title and context fields); `multiline` gives a large textarea. */
 export function TextField({
@@ -35,7 +35,7 @@ export function TextField({
   };
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block font-display text-lg font-bold">
+      <label htmlFor={id} className="mb-2 block font-display text-lg font-semibold">
         {label}
         {required && <span className="sr-only"> (required)</span>}
       </label>
@@ -53,7 +53,7 @@ export function TextField({
         <p id={`${id}-hint`} className="mt-1.5 flex justify-between gap-3 text-xs text-faint">
           <span>{hint}</span>
           {multiline && (
-            <span className={`shrink-0 font-mono ${value.length > max * 0.9 ? "text-gold" : ""}`}>
+            <span className={`shrink-0 font-mono ${value.length > max * 0.9 ? "text-judge-deep" : ""}`}>
               {value.length}/{max}
             </span>
           )}

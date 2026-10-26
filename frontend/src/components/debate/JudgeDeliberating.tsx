@@ -9,15 +9,15 @@ export function JudgeDeliberating() {
     <section
       role="status"
       aria-live="polite"
-      className="animate-fade-up mx-auto max-w-2xl rounded-3xl border border-judge/25 bg-arena-900/80 p-6 text-center shadow-[0_0_60px_-20px_var(--color-judge)] backdrop-blur sm:p-8"
+      className="animate-fade-up mx-auto max-w-2xl rounded-3xl border border-judge bg-surface p-6 text-center shadow-lift sm:p-8"
     >
       <div className="relative mx-auto grid size-16 place-items-center">
-        <span className="absolute inset-0 animate-ping rounded-full bg-judge/15 [animation-duration:2s]" />
-        <span className="relative grid size-16 place-items-center rounded-full border border-judge/40 bg-judge/10 text-judge">
+        <span className="absolute inset-0 animate-ping rounded-full bg-judge/30 [animation-duration:2s]" />
+        <span className="relative grid size-16 place-items-center rounded-full border border-judge bg-judge-soft text-judge-deep">
           <GavelIcon className="animate-gavel size-7 origin-bottom-left" />
         </span>
       </div>
-      <p className="mt-5 font-display text-xl font-bold text-judge">The judge is deliberating...</p>
+      <p className="mt-5 font-display text-xl font-semibold text-judge-deep">The judge is deliberating...</p>
       <p className="mt-1 text-sm text-muted">Weighing logic, evidence and rebuttals from both sides.</p>
       <div className="mx-auto mt-6 max-w-sm space-y-2.5" aria-hidden>
         <div className="shimmer-line animate-shimmer h-2.5 rounded-full" />

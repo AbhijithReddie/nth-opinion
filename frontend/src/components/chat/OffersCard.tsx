@@ -3,22 +3,22 @@ import { Avatar } from "./Avatar";
 import { formatLakh, formatTime } from "./chatNames";
 import { useRoom } from "./RoomContext";
 
-/** Shark Tank summary: each investor's offer (or "out"), the founder's ask, strengths and concerns. */
+/** Pitch Tank summary: each investor's offer (or "out"), the founder's ask, strengths and concerns. */
 export function OffersCard({ offers, ts }: { offers: Offers; ts: number }) {
   const { setup } = useRoom();
   const offerCount = offers.decisions.filter((d) => d.decision === "offer").length;
 
   return (
-    <section aria-label="Investor offers" className="rounded-2xl border border-gold/30 bg-arena-900 p-4 shadow-[0_10px_40px_-20px_var(--color-gold)]">
-      <p className="font-mono text-[10px] tracking-[0.18em] text-gold uppercase">
+    <section aria-label="Investor offers" className="rounded-2xl border border-butter bg-surface p-4 text-left shadow-lift">
+      <p className="font-mono text-[10px] tracking-[0.18em] text-butter-deep uppercase">
         💰 The decision · {formatTime(ts)}
       </p>
-      <h3 className="mt-1.5 font-display text-lg leading-snug font-bold">
+      <h3 className="mt-1.5 font-display text-lg leading-snug font-semibold">
         {offerCount === 0 ? "No deal this time" : `${offerCount} ${offerCount === 1 ? "offer" : "offers"} on the table`}
       </h3>
       <p className="mt-1 text-sm text-muted">{offers.summary}</p>
       {setup.context.ask && (
-        <p className="mt-2 inline-block rounded-lg bg-white/[0.05] px-2.5 py-1 text-xs text-ink/80">
+        <p className="mt-2 inline-block rounded-lg bg-sand px-2.5 py-1 text-xs text-ink">
           Your ask: <span className="font-semibold">{setup.context.ask}</span>
         </p>
       )}
@@ -30,9 +30,9 @@ export function OffersCard({ offers, ts }: { offers: Offers; ts: number }) {
       </ul>
 
       {(offers.strengths.length > 0 || offers.concerns.length > 0) && (
-        <div className="mt-4 grid gap-3 border-t border-white/[0.06] pt-3 text-sm sm:grid-cols-2">
-          <FeedbackList title="What worked" items={offers.strengths} className="text-cyan" marker="+" />
-          <FeedbackList title="What worried them" items={offers.concerns} className="text-coral" marker="−" />
+        <div className="mt-4 grid gap-3 border-t border-line pt-3 text-sm sm:grid-cols-2">
+          <FeedbackList title="What worked" items={offers.strengths} className="text-pro-deep" marker="+" />
+          <FeedbackList title="What worried them" items={offers.concerns} className="text-con-deep" marker="−" />
         </div>
       )}
     </section>
@@ -49,7 +49,7 @@ function DecisionRow({ decision: d }: { decision: InvestorDecision }) {
 
   return (
     <li
-      className={`rounded-xl border p-3 ${offer ? "bg-gold/[0.06]" : "border-white/[0.06] bg-white/[0.02]"}`}
+      className={`rounded-xl border p-3 ${offer ? "bg-butter-soft" : "border-line bg-sand/60"}`}
       style={offer ? { borderColor: `${meta.color}55` } : undefined}
     >
       <div className="flex items-center gap-2.5">
@@ -59,7 +59,7 @@ function DecisionRow({ decision: d }: { decision: InvestorDecision }) {
         </span>
         <span
           className={`ml-auto rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider uppercase ${
-            offer ? "bg-gold text-arena-950" : "bg-white/[0.06] text-faint"
+            offer ? "bg-butter text-ink" : "bg-sand-deep text-muted"
           }`}
         >
           {offer ? "Offer" : "Out"}
@@ -67,16 +67,16 @@ function DecisionRow({ decision: d }: { decision: InvestorDecision }) {
       </div>
       {offer && (
         <p className="mt-2 text-base">
-          <span className="font-display font-bold">{formatLakh(d.amount_lakh!)}</span>
+          <span className="font-mono font-semibold">{formatLakh(d.amount_lakh!)}</span>
           <span className="text-muted"> for </span>
-          <span className="font-display font-bold">{d.equity_percent}%</span>
-          <span className="block text-xs text-faint">
+          <span className="font-mono font-semibold">{d.equity_percent}%</span>
+          <span className="block text-xs text-muted">
             Values the company at {formatLakh(valuation!)}
             {d.conditions && <> · {d.conditions}</>}
           </span>
         </p>
       )}
-      <p className="mt-1.5 text-sm text-ink/75">&ldquo;{d.reason}&rdquo;</p>
+      <p className="mt-1.5 text-sm text-muted">&ldquo;{d.reason}&rdquo;</p>
     </li>
   );
 }
@@ -86,7 +86,7 @@ function FeedbackList({ title, items, className, marker }: { title: string; item
   return (
     <div>
       <p className={`font-mono text-[10px] tracking-[0.18em] uppercase ${className}`}>{title}</p>
-      <ul className="mt-1.5 space-y-1 text-ink/80">
+      <ul className="mt-1.5 space-y-1 text-ink">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span aria-hidden className={className}>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RoomMeta } from "@/config/rooms";
+import { RoomIcon } from "../illustrations/RoomIcon";
 import { StatusBadge } from "../ui/StatusBadge";
 
 /** One room in the navbar dropdown / mobile drawer: icon tile, title, Live/Soon badge, one-line description. */
@@ -10,20 +11,14 @@ export function RoomMenuItem({ room, onNavigate, active }: { room: RoomMeta; onN
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       data-menu-item
-      className={`group flex items-start gap-3 rounded-xl p-2.5 transition hover:bg-white/[0.05] focus-visible:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none ${
-        active ? "bg-white/[0.05]" : ""
+      className={`group flex items-start gap-3 rounded-xl p-2.5 transition hover:bg-sand focus-visible:bg-sand focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none ${
+        active ? "bg-sand" : ""
       }`}
     >
-      <span
-        aria-hidden
-        className="grid size-10 shrink-0 place-items-center rounded-xl border text-lg"
-        style={{ borderColor: `${room.accent}40`, backgroundColor: `${room.accent}14` }}
-      >
-        {room.icon}
-      </span>
+      <RoomIcon room={room} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className={`font-semibold ${room.status === "live" ? "text-ink" : "text-ink/70"}`}>{room.title}</span>
+          <span className="font-semibold text-ink">{room.title}</span>
           <StatusBadge status={room.status} />
         </span>
         <span className="mt-0.5 block text-[13px] leading-snug text-muted">{room.description}</span>

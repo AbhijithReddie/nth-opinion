@@ -12,7 +12,7 @@ export function ScoreBar({ label, score, speaker, delay }: { label: string; scor
         <span className="text-muted">{label}</span>
         <span className="font-mono">
           <span className={`font-semibold ${side.text}`}>{score}</span>
-          <span className="text-faint">/10</span>
+          <span className="text-muted">/10</span>
         </span>
       </div>
       <div
@@ -21,7 +21,7 @@ export function ScoreBar({ label, score, speaker, delay }: { label: string; scor
         aria-valuemin={0}
         aria-valuemax={10}
         aria-valuenow={score}
-        className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]"
+        className="h-2.5 overflow-hidden rounded-full bg-sand"
       >
         <div
           className={`animate-bar-grow h-full origin-left rounded-full ${side.bar}`}

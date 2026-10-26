@@ -75,7 +75,7 @@ export function RoomsMenu({ pathname }: { pathname: string }) {
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={onButtonKeyDown}
-        className={`inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm font-medium transition hover:bg-white/[0.06] hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none ${
+        className={`inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm font-medium transition hover:bg-sand hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none ${
           open || active ? "text-ink" : "text-muted"
         }`}
       >
@@ -88,7 +88,7 @@ export function RoomsMenu({ pathname }: { pathname: string }) {
           ref={panelRef}
           id={panelId}
           onKeyDown={onPanelKeyDown}
-          className="animate-fade-in absolute top-full left-1/2 mt-2 w-[min(92vw,34rem)] -translate-x-1/2 rounded-2xl border border-white/[0.08] bg-arena-900/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl"
+          className="animate-fade-in absolute top-full left-1/2 mt-2 w-[min(92vw,34rem)] -translate-x-1/2 rounded-2xl border border-line bg-surface p-2 shadow-lift backdrop-blur-xl"
         >
           <p className="px-2.5 pt-1.5 pb-2 font-mono text-[10px] tracking-[0.2em] text-faint uppercase">All rooms</p>
           <ul className="grid gap-0.5 sm:grid-cols-2">

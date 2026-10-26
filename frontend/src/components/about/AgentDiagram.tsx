@@ -4,19 +4,19 @@
  * Stacks vertically on phones, flows left to right on wide screens.
  */
 
-const AGENTS = [
-  { emoji: "😏", name: "Agent A", color: "var(--color-cyan)" },
-  { emoji: "🌸", name: "Agent B", color: "var(--color-coral)" },
-  { emoji: "🧐", name: "Agent C", color: "var(--color-gold)" },
-];
+import { GROUP_CHAT_FRIENDS } from "@/config/personas";
+import { Avatar } from "../chat/Avatar";
+
+// Three of the Group Chat friends stand in for "the agents".
+const AGENTS = GROUP_CHAT_FRIENDS.slice(0, 3).map((persona, i) => ({ persona, name: `Agent ${"ABC"[i]}` }));
 
 function Node({ title, body, accent }: { title: string; body: string; accent: string }) {
   return (
     <div
-      className="w-full rounded-2xl border bg-arena-950/70 p-4 text-center lg:w-44"
-      style={{ borderColor: `color-mix(in srgb, ${accent} 40%, transparent)` }}
+      className="w-full rounded-2xl border bg-surface p-4 text-center shadow-soft lg:w-44"
+      style={{ borderColor: `color-mix(in srgb, ${accent} 45%, var(--color-line))` }}
     >
-      <p className="font-display font-bold" style={{ color: accent }}>
+      <p className="font-display text-lg font-semibold" style={{ color: accent }}>
         {title}
       </p>
       <p className="mt-1 text-xs leading-relaxed text-muted">{body}</p>
@@ -37,26 +37,26 @@ function Arrow({ label }: { label?: string }) {
 
 export function AgentDiagram() {
   return (
-    <figure className="rounded-3xl border border-white/[0.07] bg-arena-900/70 p-5 sm:p-8">
+    <figure className="rounded-3xl border border-line bg-sand/60 p-5 sm:p-8">
       <div className="flex flex-col items-stretch lg:flex-row lg:items-center lg:justify-between">
         <Node title="You" body="Send a message, any time" accent="var(--color-ink)" />
         <Arrow />
         <Node title="Safety check" body="Normal, or switch everyone to supportive mode" accent="var(--color-support)" />
         <Arrow />
-        <Node title="Director" body="Picks who speaks, who reacts, or when to stop" accent="var(--color-brand)" />
+        <Node title="Director" body="Picks who speaks, who reacts, or when to stop" accent="var(--color-primary-deep)" />
         <Arrow label="speak / react" />
 
         {/* The agents, with a loop back to the director after each message. */}
-        <div className="relative rounded-2xl border border-dashed border-white/10 p-3 lg:w-48">
+        <div className="relative rounded-2xl border border-dashed border-line-strong bg-surface/60 p-3 lg:w-48">
           <p className="mb-2 text-center font-mono text-[10px] tracking-[0.18em] text-faint uppercase">Agents</p>
           <ul className="flex justify-center gap-2 lg:flex-col">
             {AGENTS.map((a) => (
               <li
                 key={a.name}
-                className="flex items-center gap-2 rounded-xl border bg-arena-950/70 px-2.5 py-1.5 text-sm"
-                style={{ borderColor: `color-mix(in srgb, ${a.color} 40%, transparent)` }}
+                className="flex items-center gap-2 rounded-xl border bg-surface px-2 py-1.5 text-sm"
+                style={{ borderColor: `color-mix(in srgb, ${a.persona.color} 40%, var(--color-line))` }}
               >
-                <span aria-hidden>{a.emoji}</span>
+                <Avatar persona={a.persona} size="xs" />
                 <span className="hidden sm:inline">{a.name}</span>
               </li>
             ))}

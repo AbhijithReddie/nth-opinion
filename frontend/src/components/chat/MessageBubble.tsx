@@ -33,8 +33,8 @@ export function MessageBubble({ message, original, grouped, highlighted, onJump 
 
         <div className={`flex max-w-[82%] flex-col sm:max-w-[70%] ${mine ? "items-end" : "items-start"}`}>
           <div
-            className={`relative rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed shadow-sm ${
-              mine ? "rounded-br-md bg-brand-strong text-white" : "rounded-bl-md border border-white/[0.06] bg-arena-800 text-ink"
+            className={`relative rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed shadow-soft ${
+              mine ? "rounded-br-md bg-primary text-white" : "rounded-bl-md border border-line bg-surface text-ink"
             }`}
           >
             {!mine && !grouped && (
@@ -42,14 +42,14 @@ export function MessageBubble({ message, original, grouped, highlighted, onJump 
                 {name}
               </p>
             )}
-            {message.replyTo && <ReplyQuote original={original} onJump={onJump} />}
+            {message.replyTo && <ReplyQuote original={original} onJump={onJump} inverse={mine} />}
             <p className="break-words whitespace-pre-wrap">
               <span className="sr-only">{name}: </span>
-              <MessageText text={message.text} />
+              <MessageText text={message.text} inverse={mine} />
             </p>
             <time
               dateTime={new Date(message.ts).toISOString()}
-              className={`float-right mt-1 ml-3 text-[10px] leading-none ${mine ? "text-white/70" : "text-faint"}`}
+              className={`float-right mt-1 ml-3 text-[10px] leading-none ${mine ? "text-white/90" : "text-faint"}`}
             >
               {formatTime(message.ts)}
             </time>

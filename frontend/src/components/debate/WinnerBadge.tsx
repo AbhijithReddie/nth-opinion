@@ -6,9 +6,9 @@ import { ScaleIcon, TrophyIcon } from "../icons";
 export function WinnerBadge({ winner }: { winner: Winner }) {
   if (winner === "tie") {
     return (
-      <div className="animate-pop inline-flex items-center gap-3 rounded-2xl border border-judge/40 bg-judge/10 px-5 py-3 text-judge">
+      <div className="animate-pop inline-flex items-center gap-3 rounded-2xl border border-judge bg-judge-soft px-5 py-3 text-judge-deep">
         <ScaleIcon className="size-7" />
-        <span className="font-display text-2xl font-extrabold sm:text-3xl">It&apos;s a tie</span>
+        <span className="font-display text-2xl font-semibold sm:text-3xl">It&apos;s a tie</span>
       </div>
     );
   }
@@ -19,7 +19,7 @@ export function WinnerBadge({ winner }: { winner: Winner }) {
       className={`animate-pop inline-flex items-center gap-3 rounded-2xl border px-5 py-3 ${side.border} ${side.bg} ${side.text} ${side.glow}`}
     >
       <TrophyIcon className="size-7" />
-      <span className="font-display text-2xl font-extrabold sm:text-3xl">{side.label} wins</span>
+      <span className="font-display text-2xl font-semibold sm:text-3xl">{side.label} wins</span>
     </div>
   );
 }

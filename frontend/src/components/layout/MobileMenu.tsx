@@ -55,8 +55,8 @@ export function MobileMenu({ pathname }: { pathname: string }) {
 
   const close = () => setOpen(false);
   const linkClass = (href: string) =>
-    `block rounded-xl px-3 py-2.5 text-base font-semibold transition hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none ${
-      pathname === href ? "text-ink bg-white/[0.05]" : "text-ink/80"
+    `block rounded-xl px-3 py-2.5 text-base font-semibold transition hover:bg-sand focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none ${
+      pathname === href ? "text-ink bg-sand" : "text-muted hover:text-ink"
     }`;
 
   return (
@@ -68,7 +68,7 @@ export function MobileMenu({ pathname }: { pathname: string }) {
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="grid size-10 place-items-center rounded-xl text-ink transition hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none md:hidden"
+        className="grid size-10 place-items-center rounded-xl text-ink transition hover:bg-sand focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none md:hidden"
       >
         <MenuIcon className="size-5" />
       </button>
@@ -76,21 +76,21 @@ export function MobileMenu({ pathname }: { pathname: string }) {
       {open &&
         createPortal(
           <div className="fixed inset-0 z-50 md:hidden" onKeyDown={onKeyDown}>
-            <div aria-hidden className="animate-fade-in absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} />
+            <div aria-hidden className="animate-fade-in absolute inset-0 bg-ink/30 backdrop-blur-sm" onClick={close} />
             <div
               ref={drawerRef}
               role="dialog"
               aria-modal="true"
               aria-label="Site menu"
-              className="animate-drawer-in scroll-thin absolute inset-y-0 right-0 flex w-[min(88vw,24rem)] flex-col overflow-y-auto border-l border-white/[0.08] bg-arena-900 p-4"
+              className="animate-drawer-in scroll-thin absolute inset-y-0 right-0 flex w-[min(88vw,24rem)] flex-col overflow-y-auto border-l border-line bg-surface p-4"
             >
               <div className="mb-4 flex items-center justify-between">
-                <span className="font-display text-lg font-extrabold">Menu</span>
+                <span className="font-display text-lg font-semibold">Menu</span>
                 <button
                   type="button"
                   aria-label="Close menu"
                   onClick={close}
-                  className="grid size-10 place-items-center rounded-xl text-muted transition hover:bg-white/[0.06] hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+                  className="grid size-10 place-items-center rounded-xl text-muted transition hover:bg-sand hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
                 >
                   <CloseIcon className="size-5" />
                 </button>
@@ -108,7 +108,7 @@ export function MobileMenu({ pathname }: { pathname: string }) {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-3 border-t border-white/[0.06] pt-3">
+                <div className="mt-3 border-t border-line pt-3">
                   <Link
                     href="/about"
                     onClick={close}
@@ -121,7 +121,7 @@ export function MobileMenu({ pathname }: { pathname: string }) {
                     href={GITHUB_URL}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-base font-semibold text-ink/80 transition hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:outline-none"
+                    className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-base font-semibold text-muted transition hover:bg-sand hover:text-ink focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
                   >
                     <GitHubIcon className="size-5" /> GitHub
                   </a>

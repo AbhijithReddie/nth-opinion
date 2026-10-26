@@ -5,7 +5,7 @@
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={`font-display font-extrabold tracking-tight whitespace-nowrap ${className ?? ""}`}>
+    <span className={`font-display font-semibold tracking-tight whitespace-nowrap ${className ?? ""}`}>
       N
       {/* translate rather than vertical-align, so the superscript doesn't push the line height around */}
       <span className="ml-[0.03em] inline-block -translate-y-[0.72em] text-[0.5em] tracking-normal">th</span> Opinion

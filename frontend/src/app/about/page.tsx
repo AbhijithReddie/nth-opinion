@@ -22,10 +22,10 @@ export default function AboutPage() {
       <main id="main" className="mx-auto w-full max-w-5xl flex-1 space-y-16 px-4 py-14 sm:px-6 sm:py-20">
         <section className="animate-fade-up text-center">
           <LogoMark className="mx-auto size-16" />
-          <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+          <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
             About <Wordmark />
           </h1>
-          <p className="mt-2 font-display text-xl text-brand">{SITE_TAGLINE}</p>
+          <p className="mt-2 font-display text-xl text-primary-deep italic">{SITE_TAGLINE}</p>
           <p className="mt-1 text-base text-muted">{SITE_EXPLAINER}</p>
           <div className="mx-auto mt-6 max-w-2xl space-y-4 text-left text-base leading-relaxed text-muted sm:text-lg">
             <p>
@@ -66,19 +66,19 @@ export default function AboutPage() {
           <SectionHeading id="stack-title" eyebrow="Tech stack" title="What it's built with" />
           <ul className="grid gap-3 sm:grid-cols-2">
             {[...TECH_STACK, { name: "Google Gemini", role: "The language models behind every agent and director" }].map((t) => (
-              <li key={t.name} className="rounded-2xl border border-white/[0.07] bg-arena-900/70 p-4">
-                <p className="font-display font-bold">{t.name}</p>
+              <li key={t.name} className="rounded-2xl border border-line bg-surface p-4 shadow-soft">
+                <p className="font-display text-lg font-semibold">{t.name}</p>
                 <p className="mt-1 text-sm text-muted">{t.role}</p>
               </li>
             ))}
           </ul>
         </section>
 
-        <section aria-labelledby="disclaimer-title" className="rounded-3xl border border-support/25 bg-support/[0.06] p-6 sm:p-8">
-          <h2 id="disclaimer-title" className="flex items-center gap-2 font-display text-xl font-bold text-support">
+        <section aria-labelledby="disclaimer-title" className="rounded-3xl border border-support/30 bg-support-soft p-6 sm:p-8">
+          <h2 id="disclaimer-title" className="flex items-center gap-2 font-display text-xl font-semibold text-support">
             <HeartIcon className="size-5" /> Please read
           </h2>
-          <p className="mt-3 text-base leading-relaxed text-ink/90">{DISCLAIMER}</p>
+          <p className="mt-3 text-base leading-relaxed text-ink">{DISCLAIMER}</p>
         </section>
 
         <div className="flex flex-col justify-center gap-3 sm:flex-row">
@@ -97,8 +97,8 @@ export default function AboutPage() {
 
 function Explainer({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-arena-900/70 p-5">
-      <h3 className="font-display text-lg font-bold">{title}</h3>
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <h3 className="font-display text-lg font-semibold">{title}</h3>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">{children}</p>
     </div>
   );

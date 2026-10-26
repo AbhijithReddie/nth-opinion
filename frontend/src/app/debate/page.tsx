@@ -17,8 +17,8 @@ export default function DebatePage() {
   return (
     <>
       <main id="main" className="relative mx-auto w-full max-w-5xl flex-1 px-4 pt-12 pb-20 sm:px-6 sm:pt-16">
-        {/* Faint floor grid behind the hero. */}
-        <div aria-hidden className="arena-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem]" />
+        {/* Dotted paper behind the hero. */}
+        <div aria-hidden className="doodle-dots pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem]" />
         <Arena />
       </main>
       <Footer />

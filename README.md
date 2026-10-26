@@ -13,7 +13,7 @@ going round-robin.
 | ---- | ------ |
 | **Debate Arena**: PRO and CON argue any motion for 1-3 rounds, then a judge scores them | Live |
 | **The Group Chat**: share a problem with a WhatsApp-style group of AI friends | Live |
-| **Shark Tank Pitch Room**: pitch your startup to 3 investors who grill you, then make offers | Live |
+| **Pitch Tank**: pitch your startup to 3 investors who grill you, then make offers | Live |
 | **Roast & Toast**: your resume or project gets roasted, then gets real feedback and a scorecard | Live |
 | **Interview Panel**: HR, a tech lead and a skeptical manager interview you from your resume | Live |
 | **Future You**: you at 30 and you at 50 talk through a decision with you now | Live |
@@ -34,7 +34,7 @@ backend/
     engine.py         the shared room engine (LangGraph director loop, summary)
     safety.py         crisis detection, supportive mode, guardrails for every persona
     group_chat.py     The Group Chat room: personas, languages, poll
-    shark_tank.py     The Shark Tank room: investors, pitch details, offers
+    shark_tank.py     The Pitch Tank room (backend id "shark-tank"): investors, pitch details, offers
     roast_and_toast.py  Roast & Toast: panel, roast/toast modes, pasted material, scorecard
     interview_panel.py  Interview Panel: interviewers, role + resume, hire/no-hire result
     future_you.py       Future You: two future selves, age check, letters + next steps
@@ -141,7 +141,7 @@ which shows up as stale dev-server errors or `EPERM ... unlink` during
 | `/` | Home: hero, room grid, how it works |
 | `/debate` | Debate Arena |
 | `/rooms/group-chat` | The Group Chat |
-| `/rooms/shark-tank` | Shark Tank Pitch Room |
+| `/rooms/pitch-tank` | Pitch Tank (`/rooms/shark-tank` redirects here) |
 | `/rooms/roast-and-toast` | Roast & Toast |
 | `/rooms/interview-panel` | Interview Panel |
 | `/rooms/future-you` | Future You |
@@ -384,7 +384,7 @@ SSE events:
 If the client disconnects (for example the user sends a new message
 mid-reply and the browser aborts the request), generation stops.
 
-Rooms with context fields also need `context`. Shark Tank requires
+Rooms with context fields also need `context`. Pitch Tank (`shark-tank`) requires
 `{"startup": "...", "ask": "..."}`, and `sector` is optional. The participants
 must be exactly `kavya`, `aditya` and `rustom`. Sending `participants` instead
 of `friends` also works.
@@ -408,7 +408,7 @@ unknown mode starts at the first one. Roast & Toast also requires the context
 fields `title` and `material` (pasted text, up to 6,000 characters), and
 `goal` is optional.
 
-Shark Tank returns the investors' decisions (amounts in ₹ lakhs). An offer
+Pitch Tank returns the investors' decisions (amounts in ₹ lakhs). An offer
 without a valid amount and equity is turned into `"out"`:
 
 ```json

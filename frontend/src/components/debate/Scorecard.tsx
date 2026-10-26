@@ -16,10 +16,10 @@ export function Scorecard({ verdict }: { verdict: Verdict }) {
   return (
     <section
       aria-labelledby="scorecard-title"
-      className="animate-fade-up rounded-3xl border border-judge/25 bg-arena-900/80 p-5 backdrop-blur sm:p-8"
+      className="animate-fade-up rounded-3xl border border-judge bg-surface p-5 shadow-lift sm:p-8"
     >
       <div className="flex flex-col items-center text-center">
-        <p id="scorecard-title" className="mb-4 font-mono text-[11px] tracking-[0.2em] text-judge uppercase">
+        <p id="scorecard-title" className="mb-4 font-mono text-[11px] tracking-[0.2em] text-judge-deep uppercase">
           The judge&apos;s verdict
         </p>
         <WinnerBadge winner={verdict.winner} />
@@ -54,12 +54,12 @@ function SideColumn({
 }) {
   const side = SIDES[speaker];
   return (
-    <div className={`rounded-2xl border p-4 sm:p-5 ${isWinner ? `${side.border} ${side.bg}` : "border-white/[0.06] bg-white/[0.02]"}`}>
+    <div className={`rounded-2xl border p-4 sm:p-5 ${isWinner ? `${side.border} ${side.bg}` : "border-line bg-sand/60"}`}>
       <div className="mb-4 flex items-baseline justify-between">
-        <h3 className={`font-display text-lg font-extrabold ${side.text}`}>{side.label}</h3>
+        <h3 className={`font-display text-lg font-semibold ${side.text}`}>{side.label}</h3>
         <p className="font-mono">
           <span className={`text-3xl font-bold ${side.text}`}>{total(scores)}</span>
-          <span className="text-sm text-faint">/30</span>
+          <span className="text-sm text-muted">/30</span>
         </p>
       </div>
       <div className="space-y-3.5">
