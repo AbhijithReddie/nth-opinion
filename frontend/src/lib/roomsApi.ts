@@ -18,13 +18,14 @@ import type {
   StudyNotes,
   SummaryItem,
 } from "./chatTypes";
-import { API_URL, readDetail, StreamError, streamSse } from "./sseClient";
+import { API_URL, readError, StreamError, streamSse, type SlowState } from "./sseClient";
+import { TRACE_EVENT_TYPES } from "./trace";
 
 /** The backend only looks at the last 40 messages, so there's no point sending more. */
 const HISTORY_LIMIT = 40;
 const SUMMARY_TIMEOUT_MS = 90_000;
 
-const EVENT_TYPES = new Set(["typing", "message", "reaction", "safety", "mode", "your_turn", "error"]);
+const EVENT_TYPES = new Set(["typing", "message", "reaction", "safety", "mode", "your_turn", "error", ...TRACE_EVENT_TYPES]);
 const FINAL_EVENTS = new Set(["your_turn", "error"]);
 
 const UNREACHABLE = "Can't reach the Nth Opinion server. Make sure the backend is running and try again.";
@@ -63,14 +64,19 @@ export async function streamRoomMessage(
   mode: string | null,
   onEvent: (event: RoomEvent) => void,
   signal: AbortSignal,
+  onSlow?: (slow: SlowState) => void,
+  /** Also stream trace events for the "Behind the scenes" panel. */
+  behindTheScenes = false,
 ): Promise<void> {
+  const body = { ...roomBody(config, setup, history), message: message.text, message_id: message.id, mode };
   await streamSse<RoomEvent>({
     path: `/api/rooms/${config.roomId}/message`,
-    body: { ...roomBody(config, setup, history), message: message.text, message_id: message.id, mode },
+    body: behindTheScenes ? { ...body, behind_the_scenes: true } : body,
     eventTypes: EVENT_TYPES,
     finalEvents: FINAL_EVENTS,
     onEvent,
     signal,
+    onSlow,
     messages: {
       unreachable: UNREACHABLE,
       slowStart: "The room took too long to answer. Please try again.",
@@ -137,9 +143,12 @@ export async function fetchRoomSummary(
       });
     } catch (err) {
       if (signal.aborted) throw err;
-      throw new StreamError(timedOut ? tooSlow : UNREACHABLE);
+      throw new StreamError(timedOut ? tooSlow : UNREACHABLE, timedOut ? "timeout" : "unreachable");
     }
-    if (!response.ok) throw new StreamError(httpMessage(response.status, await readDetail(response), "summary"));
+    if (!response.ok) {
+      const { detail, code } = await readError(response);
+      throw new StreamError(httpMessage(response.status, detail, "summary"), response.status === 429 ? "rate_limited" : code);
+    }
 
     try {
       const data = await response.json();

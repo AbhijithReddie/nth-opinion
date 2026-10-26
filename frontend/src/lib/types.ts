@@ -18,14 +18,17 @@ export interface Verdict {
   memo: string;
 }
 
-/** One SSE event from POST /api/debate, already JSON-decoded. */
+import type { TraceEvent } from "./trace";
+
+/** One SSE event from POST /api/debate, already JSON-decoded (trace events only in "Behind the scenes" mode). */
 export type DebateEvent =
+  | TraceEvent
   | { type: "turn_start"; speaker: Speaker; round: number }
   | { type: "token"; speaker: Speaker; text: string }
   | { type: "turn_end"; speaker: Speaker; round: number; text: string }
   | ({ type: "judge" } & Verdict)
   | { type: "done" }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; code?: string };
 
 /** A single speech in the debate, as shown in a TurnCard. */
 export interface Turn {

@@ -5,6 +5,7 @@ import type { DebateState } from "@/hooks/useDebate";
 import { SIDES } from "@/lib/sides";
 import type { Speaker, Turn } from "@/lib/types";
 import { ErrorBanner } from "../ErrorBanner";
+import { DemoNotice } from "../replay/DemoNotice";
 import { DecisionMemo } from "./DecisionMemo";
 import { JudgeDeliberating } from "./JudgeDeliberating";
 import { NewDebateButton } from "./NewDebateButton";
@@ -16,6 +17,8 @@ interface DebateViewProps {
   state: DebateState;
   onNewDebate: () => void;
   onRetry: () => void;
+  /** Offers the demo replay on the error, when the AI is unavailable and there's a recording. */
+  onWatchDemo?: () => void;
 }
 
 /** Who speaks next while no turn is streaming: Pro opens each round, Con answers it. */
@@ -26,7 +29,7 @@ function nextTurn(turns: Turn[]): { speaker: Speaker; round: number } {
 }
 
 /** The live debate: topic, Pro/Con turns round by round, then the judge's verdict. */
-export function DebateView({ state, onNewDebate, onRetry }: DebateViewProps) {
+export function DebateView({ state, onNewDebate, onRetry, onWatchDemo }: DebateViewProps) {
   const { phase, topic, rounds, turns, verdict, error } = state;
   const verdictRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -91,6 +94,7 @@ export function DebateView({ state, onNewDebate, onRetry }: DebateViewProps) {
         </div>
       )}
 
+      {phase === "error" && error && onWatchDemo && <DemoNotice kind="offer" onWatch={onWatchDemo} />}
       {phase === "error" && error && (
         <ErrorBanner message={error}>
           <button

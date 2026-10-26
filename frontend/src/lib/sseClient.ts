@@ -16,9 +16,32 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:800
  * any bytes means the connection is dead and we should stop waiting.
  */
 const IDLE_TIMEOUT_MS = 60_000;
+/** No response headers by now: the free server is probably waking up. */
+const WAKING_AFTER_MS = 5_000;
+/** No event by now: offer the demo replay (the request keeps going). */
+const STALLED_AFTER_MS = 12_000;
 
-/** An error whose message is written for the user, not for a developer. */
-export class StreamError extends Error {}
+/**
+ * An error whose message is written for the user, not for a developer.
+ * `code` says why, so the UI can offer the demo replay: the backend's codes
+ * ("quota_exhausted", "model_unavailable") or "rate_limited", "unreachable", "timeout".
+ */
+export class StreamError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
+/** A request that is taking a while: `waking` = no response yet after 5s, `stalled` = no event yet after 12s. */
+export type SlowState = { waking: boolean; stalled: boolean } | null;
+
+/** Ping /health in the background so the free Render server starts waking up before the first real request. */
+export function wakeServer() {
+  fetch(`${API_URL}/health`, { cache: "no-store" }).catch(() => {}); // failures don't matter here
+}
 
 export interface StreamMessages {
   unreachable: string; // fetch failed (backend down, offline)
@@ -40,9 +63,11 @@ export interface StreamOptions<E> {
   messages: StreamMessages;
   onEvent: (event: E) => void;
   signal: AbortSignal;
+  /** Told when the request is slow to start (see SlowState), and with null once it's flowing or over. */
+  onSlow?: (slow: SlowState) => void;
 }
 
-export async function streamSse<E>({ path, body, eventTypes, finalEvents, messages, onEvent, signal }: StreamOptions<E>) {
+export async function streamSse<E>({ path, body, eventTypes, finalEvents, messages, onEvent, signal, onSlow }: StreamOptions<E>) {
   // A second controller lets the idle timer cancel the request too.
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -57,6 +82,25 @@ export async function streamSse<E>({ path, body, eventTypes, finalEvents, messag
     }, IDLE_TIMEOUT_MS);
   };
 
+  // Slow-start reporting: "waking" until the response arrives, "stalled" until the first event.
+  let connected = false;
+  let gotEvent = false;
+  let wakingDue = false;
+  let stalledDue = false;
+  const reportSlow = () => {
+    const waking = wakingDue && !connected;
+    const stalled = stalledDue && !gotEvent;
+    onSlow?.(waking || stalled ? { waking, stalled } : null);
+  };
+  const wakingTimer = setTimeout(() => {
+    wakingDue = true;
+    reportSlow();
+  }, WAKING_AFTER_MS);
+  const stalledTimer = setTimeout(() => {
+    stalledDue = true;
+    reportSlow();
+  }, STALLED_AFTER_MS);
+
   /** Decode one SSE event and pass it on. Returns true for a final event. */
   const dispatch = (event: string, data: string): boolean => {
     if (!eventTypes.has(event)) return false; // ignore anything we don't know about
@@ -65,6 +109,10 @@ export async function streamSse<E>({ path, body, eventTypes, finalEvents, messag
       payload = JSON.parse(data);
     } catch {
       return false; // a malformed event shouldn't kill the whole stream
+    }
+    if (!gotEvent) {
+      gotEvent = true;
+      reportSlow();
     }
     onEvent({ ...payload, type: event } as E);
     return finalEvents.has(event);
@@ -82,10 +130,15 @@ export async function streamSse<E>({ path, body, eventTypes, finalEvents, messag
       });
     } catch (err) {
       if (signal.aborted) throw err;
-      throw new StreamError(timedOut ? messages.slowStart : messages.unreachable);
+      throw new StreamError(timedOut ? messages.slowStart : messages.unreachable, timedOut ? "timeout" : "unreachable");
     }
+    connected = true;
+    reportSlow();
 
-    if (!response.ok) throw new StreamError(messages.http(response.status, await readDetail(response)));
+    if (!response.ok) {
+      const { detail, code } = await readError(response);
+      throw new StreamError(messages.http(response.status, detail), response.status === 429 ? "rate_limited" : code);
+    }
     if (!response.body) throw new StreamError("Your browser doesn't support streaming responses.");
 
     let finished = false;
@@ -112,16 +165,22 @@ export async function streamSse<E>({ path, body, eventTypes, finalEvents, messag
     if (!finished) throw new StreamError(messages.closedEarly);
   } finally {
     clearTimeout(idleTimer);
+    clearTimeout(wakingTimer);
+    clearTimeout(stalledTimer);
+    onSlow?.(null);
     signal.removeEventListener("abort", abort);
   }
 }
 
-/** The backend's `{"detail": "..."}` message from an error response, if there is one. */
-export async function readDetail(response: Response): Promise<string | undefined> {
+/** The backend's `{"detail": "...", "code": "..."}` from an error response, if there is one. */
+export async function readError(response: Response): Promise<{ detail?: string; code?: string }> {
   try {
     const body = await response.json();
-    return typeof body?.detail === "string" ? body.detail : undefined;
+    return {
+      detail: typeof body?.detail === "string" ? body.detail : undefined,
+      code: typeof body?.code === "string" ? body.code : undefined,
+    };
   } catch {
-    return undefined; // not JSON
+    return {}; // not JSON
   }
 }

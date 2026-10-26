@@ -2,10 +2,20 @@
 
 import { useCallback, useId, useRef, useState } from "react";
 import { useDismiss } from "@/hooks/useDismiss";
-import { MoreIcon, PencilIcon, TrashIcon } from "../icons";
+import { MoreIcon, PencilIcon, PlayIcon, TrashIcon } from "../icons";
 
-/** The chat header's "⋮" menu: edit the room setup, clear the chat. */
-export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string; onEdit: () => void; onClearChat: () => void }) {
+/** The chat header's "⋮" menu: edit the room setup, watch the demo replay (if the room has one), clear the chat. */
+export function ChatMenu({
+  editLabel,
+  onEdit,
+  onClearChat,
+  onWatchDemo,
+}: {
+  editLabel: string;
+  onEdit: () => void;
+  onClearChat: () => void;
+  onWatchDemo?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -48,7 +58,7 @@ export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string
           id={menuId}
           role="menu"
           onKeyDown={(e) => {
-            // Up/Down move between the two items.
+            // Up/Down move between the items.
             if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
             e.preventDefault();
             const items = Array.from(menuRef.current?.querySelectorAll("button") ?? []);
@@ -62,6 +72,13 @@ export function ChatMenu({ editLabel, onEdit, onClearChat }: { editLabel: string
               <PencilIcon className="size-4 text-muted" /> {editLabel}
             </button>
           </li>
+          {onWatchDemo && (
+            <li role="none">
+              <button type="button" role="menuitem" onClick={() => choose(onWatchDemo)} className={itemClass}>
+                <PlayIcon className="size-4 text-muted" /> Watch a demo
+              </button>
+            </li>
+          )}
           <li role="none">
             <button type="button" role="menuitem" onClick={() => choose(onClearChat)} className={`${itemClass} text-con-deep`}>
               <TrashIcon className="size-4" /> Clear chat

@@ -4,6 +4,7 @@
  */
 
 import type { Language } from "@/config/roomChats";
+import type { TraceEvent } from "./trace";
 
 export interface RoomParticipant {
   id: string;
@@ -127,13 +128,14 @@ export type ChatItem = ChatMessage | SummaryItem | ModeItem;
 
 /** One SSE event from the room, already JSON-decoded. */
 export type RoomEvent =
+  | TraceEvent
   | { type: "typing"; friend_id: string }
   | { type: "message"; id: string; friend_id: string; text: string; reply_to: string | null; mentions: string[] }
   | { type: "reaction"; friend_id: string; message_id: string; emoji: string }
   | { type: "safety"; helpline_text: string }
   | { type: "mode"; mode: string }
   | { type: "your_turn" }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; code?: string };
 
 /** A short random id; works on plain-http pages where crypto.randomUUID is unavailable. */
 export function newId(prefix: string): string {

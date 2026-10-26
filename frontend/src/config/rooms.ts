@@ -5,6 +5,7 @@
 
 import type { SummaryData } from "@/lib/chatTypes";
 import type { Verdict } from "@/lib/types";
+import type { FlowKind } from "./flows";
 import { DEBATERS, FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, STUDY_BUDDIES, type Persona } from "./personas";
 
 export type RoomStatus = "live" | "soon";
@@ -52,6 +53,8 @@ export interface RoomMeta {
   accentInk: string;
   /** Who's in the room, for avatars on cards and the coming-soon preview. */
   cast: Persona[];
+  /** How the room's agents run, for the "Behind the scenes" diagram (see config/flows.ts). */
+  flow: FlowKind;
   example: RoomExample;
 }
 
@@ -65,6 +68,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-debate)",
     accentInk: "var(--color-room-debate-ink)",
     cast: DEBATERS,
+    flow: "debate",
     example: {
       prompt: "Should college students learn AI tools before learning to code?",
       fill: { message: "Should college students learn AI tools before learning to code?" },
@@ -105,6 +109,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-group-chat)",
     accentInk: "var(--color-room-group-chat-ink)",
     cast: GROUP_CHAT_FRIENDS,
+    flow: "director",
     example: {
       prompt: "I want to express my love to a girl... should I propose in person or write a beautiful love letter?",
       fill: {
@@ -155,6 +160,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-pitch)",
     accentInk: "var(--color-room-pitch-ink)",
     cast: SHARKS,
+    flow: "director",
     example: {
       prompt: "An app that connects home cooks with office workers for affordable homemade lunch delivery.",
       fill: {
@@ -228,6 +234,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-interview)",
     accentInk: "var(--color-room-interview-ink)",
     cast: INTERVIEWERS,
+    flow: "director",
     example: {
       prompt: "A fresher applying for a Data Analyst role, with Python, SQL and Power BI skills.",
       fill: {
@@ -292,6 +299,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-future)",
     accentInk: "var(--color-room-future-ink)",
     cast: FUTURE_SELVES,
+    flow: "director",
     example: {
       prompt: "Should I take a high-paying job in another city or stay near my family?",
       fill: {
@@ -353,6 +361,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-roast)",
     accentInk: "var(--color-room-roast-ink)",
     cast: ROAST_PANEL,
+    flow: "director",
     example: {
       prompt: "A fresher's resume summary: \"Hardworking and passionate fresher\" with one weather app project.",
       fill: {
@@ -419,6 +428,7 @@ export const ROOMS: RoomMeta[] = [
     accent: "var(--color-room-study)",
     accentInk: "var(--color-room-study-ink)",
     cast: STUDY_BUDDIES,
+    flow: "director",
     example: {
       prompt: "Explain how neural networks learn.",
       fill: {

@@ -24,7 +24,9 @@ streamed conversation:
 Nodes emit client events through LangGraph's custom stream (get_stream_writer),
 so the API and the CLI see typing / message / reaction / safety / your_turn
 events the moment they happen. The engine is stateless: every call receives
-the recent history from the client.
+the recent history from the client. With trace=True ("Behind the scenes"),
+every node also reports when it starts and ends, plus the director's decisions
+and the safety mode (see agent_trace.py).
 """
 
 import logging
@@ -40,6 +42,7 @@ from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
+from agent_trace import emit, public_reason, traced
 from llm import DIRECTOR_MODEL_NAME, ModelBusyError, content_text, invoke, timed
 from rooms.safety import GUARDRAILS, HELPLINE_TEXT, SUPPORTIVE_MODE, classify_message
 
@@ -232,13 +235,18 @@ class RoomState(TypedDict, total=False):
     cover_everyone: bool  # brand-new topic: aim for every persona to speak once
     decision: dict  # the director's latest decision, after the rules are applied
     steps: int  # director decisions made this turn
+    trace: bool  # send "Behind the scenes" trace events (see agent_trace.py)
 
 
 # ===========================================================================
 # Director: structured output
 # ===========================================================================
 class DirectorDecision(BaseModel):
-    reason: str = Field(description="Very short reasoning for this choice (shown only in server logs)")
+    reason: str = Field(
+        description="One plain-language sentence, at most 20 words, explaining this choice using people's display "
+        "names, e.g. \"Vikram disagrees with Ananya's last point\" or \"Everyone has spoken and the question is "
+        "covered\". Shown to users, so no ids or instructions."
+    )
     action: Literal["speak", "react", "end"] = Field(
         description="speak = one participant sends a message; react = one participant adds an emoji "
         "reaction to a message; end = stop and let the user reply"
@@ -372,6 +380,11 @@ def _norm_emoji(emoji: str) -> str:
 # ===========================================================================
 # Nodes
 # ===========================================================================
+def _display_name(state: RoomState, friend_id: str | None) -> str:
+    return next((p["name"] for p in state["participants"] if p["id"] == friend_id), "Someone")
+
+
+@traced(lambda state: {"node": "safety_check", "label": "Safety check"})
 @timed("safety_check", logger)
 async def safety_check_node(state: RoomState) -> dict:
     """Classify the user's latest message. On a crisis, switch every persona to supportive mode."""
@@ -382,6 +395,7 @@ async def safety_check_node(state: RoomState) -> dict:
     if crisis:
         logger.warning("Crisis detected in room %s: supportive mode on", room.id)
         get_stream_writer()(("safety", {"helpline_text": HELPLINE_TEXT}))
+    emit(state, "safety_check", {"mode": "supportive" if crisis else "normal"})
     # The very first user message is always a new topic: everyone should get a say.
     first_message = not any(m["sender"] == "user" for m in earlier)
     return {"crisis": crisis, "cover_everyone": first_message and room.everyone_speaks_on_new_topic}
@@ -547,6 +561,14 @@ def _apply_rules(state: RoomState, room: RoomConfig, d: DirectorDecision) -> tup
     return decision, fixes
 
 
+def _corrected_reason(state: RoomState, decision: dict) -> str:
+    """A plain reason for a decision the turn-taking rules changed (the director's own reason no longer fits)."""
+    if decision["action"] == "speak":
+        return f"{_display_name(state, decision['friend_id'])} speaks next so everyone gets a fair say."
+    return "That's enough for this turn, so it's over to you."
+
+
+@traced(lambda state: {"node": "director", "label": "Director decides"})
 @timed("director", logger)
 async def director_node(state: RoomState) -> dict:
     """Decide the next step of the conversation (see module docstring)."""
@@ -557,7 +579,7 @@ async def director_node(state: RoomState) -> dict:
 
     if stats["messages"] >= max_msgs:
         # Nothing to decide: skip the LLM call.
-        raw = DirectorDecision(reason="message limit reached", action="end")
+        raw = DirectorDecision(reason="That's enough replies for this turn, so it's over to you.", action="end")
     else:
         try:
             raw = await invoke(
@@ -574,7 +596,7 @@ async def director_node(state: RoomState) -> dict:
         except Exception:
             # A malformed decision shouldn't kill the chat: _apply_rules turns this into a sensible choice.
             logger.exception("Director call failed; using fallback decision")
-            raw = DirectorDecision(reason="director failed, fallback", action="end")
+            raw = DirectorDecision(reason="Wrapping up this turn.", action="end")
 
     decision, fixes = _apply_rules(state, room, raw)
     logger.info(
@@ -587,6 +609,17 @@ async def director_node(state: RoomState) -> dict:
         decision["note"],
         raw.reason,
         f" | corrected: {'; '.join(fixes)}" if fixes else "",
+    )
+
+    emit(
+        state,
+        "director_decision",
+        {
+            "action": decision["action"],
+            "persona_id": decision["friend_id"],
+            "reply_to": decision["reply_to"],
+            "reason": _corrected_reason(state, decision) if fixes else public_reason(raw.reason),
+        },
     )
 
     update: dict[str, Any] = {"decision": decision, "steps": step}
@@ -645,6 +678,12 @@ to mention the user write @you. Stay fully in character; don't repeat what other
     return [SystemMessage(content=system), HumanMessage(content=human)]
 
 
+@traced(
+    lambda state: {
+        "node": f"persona:{state['decision']['friend_id']}",
+        "label": f"{_display_name(state, state['decision']['friend_id'])} writes a message",
+    }
+)
 @timed("friend_speaks", logger)
 async def friend_speaks_node(state: RoomState) -> dict:
     """The chosen persona writes one short message (typing event first, then the message)."""
@@ -685,6 +724,12 @@ async def friend_speaks_node(state: RoomState) -> dict:
     return {"new_messages": [message]}
 
 
+@traced(
+    lambda state: {
+        "node": f"persona:{state['decision']['friend_id']}",
+        "label": f"{_display_name(state, state['decision']['friend_id'])} reacts",
+    }
+)
 @timed("friend_reacts", logger)
 async def friend_reacts_node(state: RoomState) -> dict:
     """The chosen persona adds an emoji reaction (no LLM call needed: the director picked the emoji)."""
@@ -694,6 +739,7 @@ async def friend_reacts_node(state: RoomState) -> dict:
     return {"reactions": [reaction]}
 
 
+@traced(lambda state: {"node": "your_turn", "label": "Your turn"})
 async def your_turn_node(state: RoomState) -> dict:
     get_stream_writer()(("your_turn", {}))
     return {}
@@ -752,10 +798,12 @@ async def stream_turn(
     message_id: str | None = None,
     mode: str | None = None,
     context: dict[str, str] | None = None,
+    trace: bool = False,
 ) -> AsyncIterator[tuple[str, dict]]:
     """Run one user message through the room graph, yielding (event, data) as they happen.
 
-    Events: typing, message, reaction, safety, mode, your_turn. Raises
+    Events: typing, message, reaction, safety, mode, your_turn, plus the
+    trace events in agent_trace.py when `trace` is True. Raises
     ModelBusyError when the model is unavailable; cancelling the iteration
     (e.g. the client disconnected) stops the graph and any in-flight LLM call.
     """
@@ -773,6 +821,7 @@ async def stream_turn(
         "crisis": False,
         "cover_everyone": False,
         "steps": 0,
+        "trace": trace,
     }
     async for event, data in room_graph.astream(
         state,

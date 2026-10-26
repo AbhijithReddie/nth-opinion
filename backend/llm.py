@@ -7,7 +7,8 @@ Everything model-related lives here so every feature behaves the same way:
 * the lowest thinking level each model accepts (short replies don't need deep thinking)
 * a per-call timeout and a capped number of SDK retries
 * one retry on GEMINI_FALLBACK_MODEL when the main model is overloaded or rate limited
-* ModelBusyError, whose message is safe to show to users
+* ModelBusyError, whose message is safe to show to users and whose code says why
+  ("quota_exhausted" or "model_unavailable"), so the frontend can offer the demo replay
 * a `timed` decorator that logs how long each graph node takes
 """
 
@@ -49,13 +50,19 @@ MAX_ATTEMPTS = 3
 THINKING_LEVELS = ("minimal", "low", "medium", "high")  # lowest first
 
 BUSY_MESSAGE = "The AI model is busy right now, please try again in a minute."
+QUOTA_MESSAGE = "The AI has used up its free quota for now. Please try again a little later."
 
 
 class ModelBusyError(Exception):
-    """The model timed out or stayed overloaded. str() is safe to show to users."""
+    """The model timed out, stayed overloaded or ran out of quota. str() is safe to show to users.
 
-    def __init__(self, message: str = BUSY_MESSAGE):
+    `code` is sent to the frontend with the error: "quota_exhausted" (429 / RESOURCE_EXHAUSTED)
+    or "model_unavailable" (anything else).
+    """
+
+    def __init__(self, message: str = BUSY_MESSAGE, code: str = "model_unavailable"):
         super().__init__(message)
+        self.code = code
 
 
 # ---------------------------------------------------------------------------
@@ -137,9 +144,23 @@ logger.info(
 )
 
 
+def _is_quota(exc: Exception) -> bool:
+    """True when the quota or rate limit is used up (429 / RESOURCE_EXHAUSTED)."""
+    return (
+        isinstance(exc, GoogleRateLimitError)
+        or getattr(exc, "code", None) == 429
+        or "RESOURCE_EXHAUSTED" in str(exc)
+    )
+
+
 def _is_overloaded(exc: Exception) -> bool:
     """True for 503 (model overloaded) and 429 (rate limited) errors."""
-    return isinstance(exc, GoogleRateLimitError) or getattr(exc, "code", None) in (429, 503)
+    return _is_quota(exc) or getattr(exc, "code", None) == 503
+
+
+def _busy_error(exc: Exception) -> ModelBusyError:
+    """The user-facing error for an overloaded model: quota exhausted, or just unavailable."""
+    return ModelBusyError(QUOTA_MESSAGE, "quota_exhausted") if _is_quota(exc) else ModelBusyError()
 
 
 async def _invoke_model(model: _Gemini, messages: list, temperature: float, schema: type | None, config: dict):
@@ -180,14 +201,14 @@ async def invoke(
         if not _is_overloaded(exc):
             raise
         if FALLBACK_MODEL_NAME in (None, model):
-            raise ModelBusyError() from exc
+            raise _busy_error(exc) from exc
         logger.warning("%s overloaded (%s); retrying once with %s", model, exc, FALLBACK_MODEL_NAME)
 
     try:
         return await _invoke_model(_model(FALLBACK_MODEL_NAME), messages, temperature, schema, config)
     except Exception as exc:
         if _is_overloaded(exc):
-            raise ModelBusyError() from exc
+            raise _busy_error(exc) from exc
         raise
 
 

@@ -12,13 +12,17 @@
  *   stream (AbortController) and queue, then sends with the full history.
  * - Rooms with modes (e.g. Roast -> Toast) track the current mode, send it with
  *   each message, and switch when the server or the user says so.
+ * - Demo replay mode (`replay` given): plays a recorded conversation through the
+ *   same queue and state, on the replay's clock, and never touches saved chats.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LANGUAGES, MESSAGE_MAX, NAME_MAX, personaById, type RoomChatConfig } from "@/config/roomChats";
-import { newId, type ChatItem, type ChatMessage, type RoomEvent, type RoomSetup } from "@/lib/chatTypes";
+import { newId, type ChatItem, type ChatMessage, type RoomEvent, type RoomSetup, type SummaryItem } from "@/lib/chatTypes";
+import { playEvents, type ReplayClock, type RoomReplay } from "@/lib/replay";
 import { fetchRoomSummary, streamRoomMessage } from "@/lib/roomsApi";
-import { StreamError } from "@/lib/sseClient";
+import { StreamError, type SlowState } from "@/lib/sseClient";
+import { applyTrace, EMPTY_TRACE, type TraceState } from "@/lib/trace";
 import { loadJson, removeKey, saveJson } from "@/lib/storage";
 
 const MAX_STORED_ITEMS = 200;
@@ -33,6 +37,14 @@ export interface ChatError {
   message: string;
   /** What "Try again" should redo. */
   retry: "message" | "summary";
+  /** Why it failed (see StreamError), so the chat can offer the demo replay. */
+  code?: string;
+}
+
+/** A recording to play instead of talking to the server (demo replay mode). */
+export interface RoomReplayPlayback {
+  recording: RoomReplay;
+  clock: ReplayClock;
 }
 
 interface Saved {
@@ -47,8 +59,8 @@ const firstMode = (config: RoomChatConfig) => config.modes?.[0]?.id ?? null;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
 
-/** True if a saved setup still fits the room's config (personas, limits, required fields). */
-function isValidSetup(config: RoomChatConfig, s: Partial<RoomSetup> | undefined): s is RoomSetup {
+/** True if a saved (or recorded) setup still fits the room's config (personas, limits, required fields). */
+export function isValidSetup(config: RoomChatConfig, s: Partial<RoomSetup> | undefined): s is RoomSetup {
   if (!s || typeof s.title !== "string" || !LANGUAGES.some((l) => l.id === s.language)) return false;
   if (!s.context || typeof s.context !== "object") return false;
   if (config.contextFields.some((f) => f.required && !s.context?.[f.id]?.trim())) return false;
@@ -102,9 +114,12 @@ function loadSaved(config: RoomChatConfig): Saved {
   };
 }
 
-export function useRoomChat(config: RoomChatConfig) {
+/** `behindTheScenes` asks the server for trace events (the panel is open); replays play whatever was recorded. */
+export function useRoomChat(config: RoomChatConfig, replay?: RoomReplayPlayback, behindTheScenes = false) {
   // This hook only runs in the browser (the page loads it with ssr: false), so reading storage here is safe.
-  const [initial] = useState(() => loadSaved(config));
+  const [initial] = useState<Saved>(() =>
+    replay ? { setup: replay.recording.setup, items: [], safety: null, mode: firstMode(config) } : loadSaved(config),
+  );
   const [setup, setSetupState] = useState<RoomSetup | null>(initial.setup);
   const [editing, setEditing] = useState(initial.setup === null);
   const [items, setItems] = useState<ChatItem[]>(initial.items);
@@ -114,6 +129,13 @@ export function useRoomChat(config: RoomChatConfig) {
   const [error, setError] = useState<ChatError | null>(null);
   const [safety, setSafety] = useState<string | null>(initial.safety);
   const [mode, setModeState] = useState<string | null>(initial.mode);
+  const [slow, setSlow] = useState<SlowState>(null);
+  /** The current turn, for the "Behind the scenes" panel. */
+  const [trace, setTrace] = useState<TraceState>(EMPTY_TRACE);
+  const behindTheScenesRef = useRef(behindTheScenes);
+  useEffect(() => {
+    behindTheScenesRef.current = behindTheScenes;
+  }, [behindTheScenes]);
 
   // Refs mirror the latest values for use inside async code.
   const itemsRef = useRef(items);
@@ -129,10 +151,13 @@ export function useRoomChat(config: RoomChatConfig) {
     setItems(itemsRef.current);
   }, []);
 
-  // Save after every change (only the newest items, to keep storage small).
+  // Save after every change (only the newest items, to keep storage small). Replays are never saved.
   useEffect(() => {
-    if (setup) saveJson(config.storageKey, { setup, items: items.slice(-MAX_STORED_ITEMS), safety, mode });
-  }, [config.storageKey, setup, items, safety, mode]);
+    if (setup && !replay) saveJson(config.storageKey, { setup, items: items.slice(-MAX_STORED_ITEMS), safety, mode });
+  }, [config.storageKey, replay, setup, items, safety, mode]);
+
+  // In a replay every wait runs on the replay's clock (pause, 2x, skip to the end).
+  const wait = replay?.clock.sleep ?? sleep;
 
   /** Switch the room's mode and mark the switch in the chat with a divider. Unknown modes are ignored. */
   const applyMode = useCallback(
@@ -180,6 +205,7 @@ export function useRoomChat(config: RoomChatConfig) {
       setTyping([]);
       setReplying(true);
       setError(null);
+      setTrace(EMPTY_TRACE);
 
       // --- the pacing queue -------------------------------------------------
       const typingSince = new Map<string, number>();
@@ -194,6 +220,7 @@ export function useRoomChat(config: RoomChatConfig) {
       };
       let queue = Promise.resolve();
       let failure: string | null = null;
+      let failureCode: string | undefined;
 
       const handle = async (event: RoomEvent) => {
         if (!alive()) return;
@@ -205,7 +232,7 @@ export function useRoomChat(config: RoomChatConfig) {
             // Keep "typing..." up for a natural minimum before the message lands.
             showTyping(event.friend_id);
             const extra = Math.min(event.text.length * TYPING_MS_PER_CHAR, MAX_EXTRA_TYPING_MS);
-            await sleep(typingSince.get(event.friend_id)! + MIN_TYPING_MS + extra - Date.now());
+            await wait(typingSince.get(event.friend_id)! + MIN_TYPING_MS + extra - Date.now());
             if (!alive()) return;
             stopTyping(event.friend_id);
             updateItems((prev) => [
@@ -221,11 +248,11 @@ export function useRoomChat(config: RoomChatConfig) {
                 ts: Date.now(),
               },
             ]);
-            await sleep(250 + Math.random() * 450); // small gap before the next persona chimes in
+            await wait(250 + Math.random() * 450); // small gap before the next persona chimes in
             break;
           }
           case "reaction":
-            await sleep(300);
+            await wait(300);
             if (!alive()) return;
             updateItems((prev) =>
               prev.map((item) =>
@@ -245,28 +272,40 @@ export function useRoomChat(config: RoomChatConfig) {
             break;
           case "error":
             failure = event.message;
+            failureCode = event.code;
             break;
           case "your_turn":
             break;
         }
+        // Trace events wait in the same queue, so the panel stays in step with the chat.
+        if (alive()) setTrace((t) => applyTrace(t, event));
       };
       // -----------------------------------------------------------------------
 
+      const onEvent = (event: RoomEvent) => {
+        queue = queue.then(() => handle(event));
+      };
       try {
-        await streamRoomMessage(
-          config,
-          room,
-          history,
-          { id: userMsg.id, text: userMsg.text },
-          modeRef.current,
-          (event) => {
-            queue = queue.then(() => handle(event));
-          },
-          controller.signal,
-        );
+        if (replay) {
+          await playEvents(replay.recording.events, onEvent, replay.clock, controller.signal);
+        } else {
+          const message = { id: userMsg.id, text: userMsg.text };
+          await streamRoomMessage(
+            config,
+            room,
+            history,
+            message,
+            modeRef.current,
+            onEvent,
+            controller.signal,
+            setSlow,
+            behindTheScenesRef.current,
+          );
+        }
       } catch (err) {
         if (!alive()) return; // replaced by a newer message, cleared, or the page closed
         failure = err instanceof StreamError ? err.message : "Something unexpected went wrong. Please try again.";
+        failureCode = err instanceof StreamError ? err.code : undefined;
       }
 
       await queue; // let the messages that already arrived finish "typing"
@@ -274,9 +313,9 @@ export function useRoomChat(config: RoomChatConfig) {
       streamRef.current = null;
       setTyping([]);
       setReplying(false);
-      if (failure) setError({ message: failure, retry: "message" });
+      if (failure) setError({ message: failure, retry: "message", code: failureCode });
     },
-    [applyMode, config, updateItems],
+    [applyMode, config, replay, updateItems, wait],
   );
 
   /** Send a message. Works while the room is still replying: that reply is cancelled. */
@@ -311,7 +350,13 @@ export function useRoomChat(config: RoomChatConfig) {
     setSummarizing(true);
     setError(null);
     try {
-      const data = await fetchRoomSummary(config, room, itemsRef.current, controller.signal);
+      let data: SummaryItem["data"];
+      if (replay?.recording.summary) {
+        await replay.clock.sleep(1500); // as if the room were thinking it over
+        data = replay.recording.summary;
+      } else {
+        data = await fetchRoomSummary(config, room, itemsRef.current, controller.signal);
+      }
       updateItems((prev) => [
         ...prev,
         { kind: "summary", type: config.summary.type, id: newId("summary"), ts: Date.now(), data } as ChatItem,
@@ -321,6 +366,7 @@ export function useRoomChat(config: RoomChatConfig) {
       setError({
         message: err instanceof StreamError ? err.message : "Couldn't wrap this up. Please try again.",
         retry: "summary",
+        code: err instanceof StreamError ? err.code : undefined,
       });
     } finally {
       if (summaryRef.current === controller) {
@@ -328,7 +374,32 @@ export function useRoomChat(config: RoomChatConfig) {
         setSummarizing(false);
       }
     }
-  }, [config, updateItems]);
+  }, [config, replay, updateItems]);
+
+  // Demo replay mode: post the recorded message, play the replies, then the summary.
+  // (Restarts cleanly if React re-runs the effect, e.g. in development's Strict Mode.)
+  useEffect(() => {
+    if (!replay) return;
+    let disposed = false;
+    const { message, summary } = replay.recording;
+    const userMsg: ChatMessage = {
+      kind: "message",
+      id: message.id,
+      sender: "user",
+      text: message.text,
+      replyTo: null,
+      mentions: [],
+      reactions: [],
+      ts: Date.now(),
+    };
+    updateItems(() => [userMsg]);
+    void runReply(userMsg, []).then(() => {
+      if (!disposed && summary) void requestSummary();
+    });
+    return () => {
+      disposed = true;
+    };
+  }, [replay, requestSummary, runReply, updateItems]);
 
   /** Redo whatever failed: the summary, or the replies to your last message. */
   const retry = useCallback(() => {
@@ -375,6 +446,10 @@ export function useRoomChat(config: RoomChatConfig) {
     replying,
     summarizing,
     error,
+    /** The reply is slow to start (server waking up, or no answer yet); null otherwise. */
+    slow,
+    /** What the "Behind the scenes" panel shows for the current turn. */
+    trace,
     safety,
     /** Current mode id, for rooms with modes. */
     mode,

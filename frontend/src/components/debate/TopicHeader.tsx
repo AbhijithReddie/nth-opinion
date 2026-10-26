@@ -1,4 +1,5 @@
 import type { Phase } from "@/lib/types";
+import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
 import { NewDebateButton } from "./NewDebateButton";
 
 const STATUS: Record<Exclude<Phase, "idle">, { label: string; className: string; live?: boolean }> = {
@@ -39,7 +40,10 @@ export function TopicHeader({
           &ldquo;{topic}&rdquo;
         </h2>
       </div>
-      <NewDebateButton onClick={onNewDebate} className="self-start sm:self-auto" />
+      <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+        <BehindTheScenesToggle />
+        <NewDebateButton onClick={onNewDebate} />
+      </div>
     </header>
   );
 }

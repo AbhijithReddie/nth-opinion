@@ -9,6 +9,9 @@ The debate is modelled as a small state machine:
 * pro   : argues FOR the topic (and answers Con's last point in later rounds)
 * con   : argues AGAINST the topic and rebuts Pro's most recent argument
 * judge : reads the full transcript and returns structured scores + a memo
+
+With trace=True ("Behind the scenes"), each node also reports node_start
+(with the round) and node_end events (see agent_trace.py).
 """
 
 import logging
@@ -19,6 +22,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
+from agent_trace import traced
 from llm import ModelBusyError, content_text, invoke, timed
 
 logger = logging.getLogger("debate-arena.graph")
@@ -54,6 +58,7 @@ class DebateState(TypedDict, total=False):
     scores: dict
     winner: str
     memo: str
+    trace: bool  # send "Behind the scenes" trace events
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +116,14 @@ async def _speak(system_prompt: str, user_prompt: str) -> str:
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
+def _node_info(node: str, label: str, round_no: int | None = None) -> dict:
+    """node_start data for the trace; debaters include the round they argue in."""
+    if round_no is None:
+        return {"node": node, "label": label}
+    return {"node": node, "label": f"{label} (round {round_no})", "round": round_no}
+
+
+@traced(lambda s: _node_info("pro", "Pro argues for", s.get("current_round", 0) + 1))
 @timed("pro", logger)
 async def pro_node(state: DebateState) -> dict:
     """PRO opens each round, arguing FOR the topic.
@@ -143,6 +156,7 @@ async def pro_node(state: DebateState) -> dict:
     }
 
 
+@traced(lambda s: _node_info("con", "Con argues against", s["current_round"]))
 @timed("con", logger)
 async def con_node(state: DebateState) -> dict:
     """CON argues AGAINST the topic and rebuts PRO's most recent argument."""
@@ -166,6 +180,7 @@ async def con_node(state: DebateState) -> dict:
     return {"transcript": [{"speaker": "con", "round": round_no, "text": text}]}
 
 
+@traced(lambda s: _node_info("judge", "Judge scores the debate"))
 @timed("judge", logger)
 async def judge_node(state: DebateState) -> dict:
     """The JUDGE scores both sides and writes a balanced decision memo."""
@@ -219,8 +234,9 @@ def build_graph():
 graph = build_graph()
 
 
-def initial_state(topic: str, max_rounds: int) -> DebateState:
+def initial_state(topic: str, max_rounds: int, trace: bool = False) -> DebateState:
     return {
+        "trace": trace,
         "topic": topic,
         "max_rounds": max_rounds,
         "current_round": 0,

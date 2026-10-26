@@ -29,6 +29,7 @@ backend/
   llm.py              shared Gemini setup: models, thinking level, fallback, timeouts, timing logs
   graph.py            Debate Arena graph (pro -> con -> ... -> judge)
   main.py             FastAPI app: /api/debate and /api/rooms/*
+  agent_trace.py      "Behind the scenes" trace events (node starts/ends, decisions, safety mode)
   rooms/
     __init__.py       registers every room
     engine.py         the shared room engine (LangGraph director loop, summary)
@@ -41,6 +42,7 @@ backend/
     study_group.py      Study Group: learn/quiz modes, topic + notes, study notes with a self-test
   run_cli.py          Debate Arena in the terminal
   chat_cli.py         Group Chat in the terminal
+  record_replays.py   records the demo replays (see "Demo replay mode")
   test_stream.py      smoke test for the debate SSE stream
 ```
 
@@ -153,6 +155,7 @@ which shows up as stale dev-server errors or `EPERM ... unlink` during
 ```
 frontend/
   public/                 nth-opinion-logo.svg (logo + wordmark), nth-opinion-icon.svg, favicon.svg
+  public/replays/         recorded demo conversations, one <room-id>.json per room
   src/config/
     rooms.ts              every room's id, title, icon, description, status and route
     personas.ts           each chat room's personas (ids match the backend)
@@ -165,8 +168,13 @@ frontend/
     chat/                 shared chat-room UI (setup screen, messages, poll / offers cards, composer, ...)
     debate/ landing/      Debate Arena UI
     ui/ brand/            buttons, badges, headings, the logo mark
+    replay/               demo replay controls, "watch the demo" notices, the replaying chat room
   src/hooks/useRoomChat.ts    chat state, SSE pacing, cancel-on-new-message, localStorage
   src/lib/sseClient.ts        shared POST + SSE reader used by the debate and the rooms
+  src/lib/replay.ts           demo replay mode: loading recordings, the replay clock, playback
+  src/lib/trace.ts            "Behind the scenes": trace event types and the panel's reducer
+  src/config/flows.ts         each room's agent diagram for the "Behind the scenes" panel
+  src/components/trace/       the "Behind the scenes" panel, diagram, mobile sheet and toggle
 ```
 
 To list a new room, add it to `src/config/rooms.ts`. The navbar, home grid
@@ -324,6 +332,7 @@ Request body:
 
 - `topic`: 5-200 characters
 - `rounds`: 1-3
+- `behind_the_scenes` (optional, default `false`): also stream trace events (see "Behind the scenes mode")
 
 The response is an SSE stream (`text/event-stream`). Each event's `data` is JSON:
 
@@ -334,7 +343,7 @@ The response is an SSE stream (`text/event-stream`). Each event's `data` is JSON
 | `turn_end`   | `{"speaker", "round", "text"}`: the final text for that turn |
 | `judge`      | `{"scores": {"pro": {...}, "con": {...}}, "winner": "pro" \| "con" \| "tie", "memo": "..."}` |
 | `done`       | `{}`                                                      |
-| `error`      | `{"message": "..."}`                                      |
+| `error`      | `{"message": "...", "code": "quota_exhausted"}` (or `"model_unavailable"`) |
 
 Use the `turn_end` text as the final version of a turn: it has the 150-word
 limit applied, so it can be slightly shorter than the streamed tokens.
@@ -368,6 +377,7 @@ participant limits, languages and modes.
 - `friends`: 3-4 of `rohit`, `priya`, `vikram`, `ananya`, `arjun`, `meera`, with names of 1-20 characters
 - `language`: `english`, `hinglish` or `tenglish`
 - `history`: earlier messages (only the last 40 are used)
+- `behind_the_scenes` (optional, default `false`): also stream trace events (see "Behind the scenes mode")
 
 SSE events:
 
@@ -379,7 +389,7 @@ SSE events:
 | `safety`    | `{"helpline_text"}` |
 | `mode`      | `{"mode"}`: the director switched modes (rooms with modes only) |
 | `your_turn` | `{}`: the turn is over |
-| `error`     | `{"message"}` |
+| `error`     | `{"message", "code"}` (see Errors and limits) |
 
 If the client disconnects (for example the user sends a new message
 mid-reply and the browser aborts the request), generation stops.
@@ -482,10 +492,113 @@ Errors before a stream starts are returned as JSON `{"detail": "..."}`:
 busy (summary), and `429` for rate limits. Limits are per IP per hour and
 are tracked separately: 5 debates, 40 room messages and 10 summaries.
 
+When the model fails, the SSE `error` event (and a failed summary's JSON)
+also carries a `code`: `"quota_exhausted"` when Gemini's quota or rate limit
+is used up (429 / `RESOURCE_EXHAUSTED`), and `"model_unavailable"` for any
+other model failure. The message is always friendly and never includes the
+underlying error. The frontend uses the code to offer the demo replay.
+
 **Deploying behind a proxy:** run uvicorn with `--proxy-headers` (and
 `--forwarded-allow-ips` set to your proxy) so rate limiting sees the real
 client IP. The rate limiter is in-memory, so it resets on restart and is per
 process. See [Deploying the backend on Render](#deploying-the-backend-on-render).
+
+## Demo replay mode
+
+So visitors always see the rooms working, even when the AI is unavailable,
+every room can play a real recorded conversation. Recordings live in
+`frontend/public/replays/<room-id>.json` (`debate`, `group-chat`,
+`shark-tank`, `interview-panel`, `future-you`, `roast-and-toast`,
+`study-group`). Each one holds the setup that was used (personas, names,
+language, room details), the user's message, every SSE event with its time
+offset from the start, and the room's final summary.
+
+**Playing.** The replay feeds the recorded events through the same hooks
+(`useDebate`, `useRoomChat`) and components as a live room, so it looks
+identical, with the original timing (long gaps capped at 2.5 seconds). A bar
+labelled "Replay of a recorded conversation" has pause/resume, 1x/2x, skip to
+the end and exit. Replays never touch your saved chat, and a live request
+that is still loading keeps going underneath.
+
+**When it's offered.** Every room page has a "Watch a demo" button next to
+its start button (and in the chat's ⋮ menu). The replay is also offered
+automatically ("The AI is taking a break, watch a real conversation
+instead") when an error has the code `quota_exhausted` or
+`model_unavailable`, on a `429` rate limit, when the backend can't be
+reached, or when nothing arrives within 12 seconds of sending. A room
+without a recording hides the button and shows the usual error.
+
+Replays recorded with trace events drive the "Behind the scenes" panel
+too. Older recordings without them still play; the panel then says
+"Behind-the-scenes data isn't available for this replay."
+
+**Waking the server.** Opening any room page sends a background
+`GET /health`, so a sleeping free Render server starts waking up early. If a
+request hasn't been answered after 5 seconds, the room shows "Waking up the
+server (free hosting can take up to a minute)..." with the option to watch
+the replay meanwhile.
+
+### Re-recording the replays
+
+`backend/record_replays.py` runs each room's example (the "Try this example"
+input in `frontend/src/config/rooms.ts`) against the real agents: the Debate
+Arena with 1 round, the other rooms with their default panel in English,
+then their summary. It reads the examples with Node, so run `npm install` in
+`frontend/` first. With the virtual environment active, in `backend\`:
+
+```powershell
+python record_replays.py                    # every room that has no recording yet
+python record_replays.py --room group-chat  # just one room
+python record_replays.py --force            # re-record rooms that already have one
+python record_replays.py --gap 10           # wait longer between LLM calls (default 5 seconds)
+```
+
+It waits between LLM calls to stay under per-minute rate limits (the waits
+are left out of the recorded timing), and a room that fails is not saved, so
+you can simply run it again later. Each room takes about 8 to 12 model calls;
+on Gemini's free tier the daily request limit may only allow a couple of
+rooms per day. Re-record a room after changing its example, personas or
+setup fields (a recording whose setup no longer fits the room is not offered).
+
+## Behind the scenes mode
+
+Every room has a "Behind the scenes" toggle (the eye button in its header;
+the Debate Arena has it under the page title and in the debate header). It
+is remembered in localStorage. When it's on, the room shows how its agents
+work in real time: a side panel next to the conversation on wide screens, a
+sheet docked above the composer (or at the bottom of the page) on phones,
+which expands and collapses.
+
+- **Live flow diagram**: the room's graph, built from `flow` in
+  `config/rooms.ts` by `config/flows.ts`. Room-engine rooms show safety check
+  -> director -> each persona (with their avatar) -> your turn, with arrows
+  back to the director; the Debate Arena shows Pro <-> Con for the rounds,
+  then the Judge. The running node pulses, the latest arrow animates, and
+  every node shows how long it last took. Motion stops for people who
+  prefer reduced motion.
+- **Decision timeline**: each director decision, newest first, with the
+  persona, the action, a short plain-language reason and the time it took,
+  plus the safety mode ("Supportive mode on" after a crisis message). The
+  Debate Arena lists its steps instead.
+- **Turn stats**: messages, reactions, node runs and the agents' working time
+  for the current turn.
+
+**How it works.** With the toggle on, requests include
+`"behind_the_scenes": true` and the SSE stream gains four events:
+
+| Event               | Data                                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| `node_start`        | `{"node", "label"}` (+ `"round"` for Pro and Con)                    |
+| `node_end`          | `{"node", "duration_ms"}`                                            |
+| `director_decision` | `{"action": "speak" \| "react" \| "end", "persona_id", "reply_to", "reason"}` |
+| `safety_check`      | `{"mode": "normal" \| "supportive"}`                                  |
+
+Node names are `safety_check`, `director`, `persona:<id>` and `your_turn` in
+the rooms, and `pro`, `con` and `judge` in the Debate Arena. The reason is
+the director's own short explanation (at most about 20 words), or a fixed
+sentence when the turn-taking rules changed its choice. Trace events never
+include prompts, persona instructions, model output beyond the chat itself,
+keys or error details. Without the flag, nothing is sent and nothing changes.
 
 ## Deploying the backend on Render
 

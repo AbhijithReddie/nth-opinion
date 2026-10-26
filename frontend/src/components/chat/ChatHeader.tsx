@@ -1,3 +1,4 @@
+import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
 import { Avatar } from "./Avatar";
 import { ChatMenu } from "./ChatMenu";
 import { typingLabel } from "./chatNames";
@@ -9,12 +10,15 @@ export function ChatHeader({
   mode,
   onEdit,
   onClearChat,
+  onWatchDemo,
 }: {
   typing: string[];
   /** Current mode id, for rooms with modes. */
   mode: string | null;
-  onEdit: () => void;
-  onClearChat: () => void;
+  /** Leave out onEdit and onClearChat to hide the menu (demo replays). */
+  onEdit?: () => void;
+  onClearChat?: () => void;
+  onWatchDemo?: () => void;
 }) {
   const { config, setup, persona, nameOf } = useRoom();
   const modeLabel = config.modes?.find((m) => m.id === mode)?.label;
@@ -40,7 +44,10 @@ export function ChatHeader({
           {modeLabel}
         </span>
       )}
-      <ChatMenu editLabel={config.copy.editMenu} onEdit={onEdit} onClearChat={onClearChat} />
+      <BehindTheScenesToggle compact />
+      {onEdit && onClearChat && (
+        <ChatMenu editLabel={config.copy.editMenu} onEdit={onEdit} onClearChat={onClearChat} onWatchDemo={onWatchDemo} />
+      )}
     </header>
   );
 }

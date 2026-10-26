@@ -14,7 +14,7 @@ SSE events sent by /api/debate (each `data:` field is JSON):
     turn_end    {"speaker", "round", "text"}   final text (word limit applied)
     judge       {"scores", "winner", "memo"}
     done        {}
-    error       {"message"}                    safe, user-facing message only
+    error       {"message", "code"}            safe, user-facing message only (codes below)
 
 SSE events sent by /api/rooms/{room_id}/message:
     typing      {"friend_id"}
@@ -23,7 +23,18 @@ SSE events sent by /api/rooms/{room_id}/message:
     safety      {"helpline_text"}
     mode        {"mode"}                       only rooms with modes
     your_turn   {}
-    error       {"message"}
+    error       {"message", "code"}
+
+"Behind the scenes": send "behind_the_scenes": true with a debate or room
+message and the stream also includes trace events (see agent_trace.py):
+    node_start         {"node", "label"}           (+ "round" in the debate)
+    node_end           {"node", "duration_ms"}
+    director_decision  {"action", "persona_id", "reply_to", "reason"}   rooms only
+    safety_check       {"mode": "normal" | "supportive"}               rooms only
+
+Error codes: "quota_exhausted" (Gemini quota / rate limit used up) or
+"model_unavailable" (any other model failure). The frontend offers the demo
+replay for both. Failed summaries return the same code next to "detail".
 
 Run with:  uvicorn main:app --port 8000
 Behind a proxy (e.g. Render):
@@ -79,6 +90,7 @@ app.add_middleware(
 class DebateRequest(BaseModel):
     topic: Annotated[str, StringConstraints(strip_whitespace=True, min_length=5, max_length=200)]
     rounds: int = Field(ge=1, le=3)
+    behind_the_scenes: bool = False  # also stream trace events for the "Behind the scenes" panel
 
 
 Id = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)]
@@ -116,6 +128,7 @@ class RoomMessageRequest(RoomContext):
     message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
     message_id: Id | None = None  # the client's id for this message, so replies can quote it
     mode: Id | None = None  # rooms with modes: the mode from the last `mode` event
+    behind_the_scenes: bool = False  # also stream trace events for the "Behind the scenes" panel
 
 
 def _room_validation_message(fields: set[str]) -> str:
@@ -212,13 +225,14 @@ def _sse(event: str, data: dict) -> dict:
     return {"event": event, "data": json.dumps(data)}
 
 
-async def _debate_events(topic: str, rounds: int):
+async def _debate_events(topic: str, rounds: int, trace: bool = False):
     """Run the graph and translate its output into SSE events.
 
     stream_mode="messages" yields LLM tokens as they are generated (LangGraph
     turns on streaming for the model calls inside the nodes), tagged with the
     node that produced them. stream_mode="updates" yields each node's state
     changes once it finishes, which gives us the final turn text and verdict.
+    With `trace`, stream_mode="custom" adds the nodes' trace events, passed on as they are.
     """
     speaker: str | None = None  # debater currently speaking
     pro_turns_done = 0
@@ -231,10 +245,12 @@ async def _debate_events(topic: str, rounds: int):
         return _sse("turn_start", {"speaker": node, "round": round_no})
 
     try:
-        async for mode, chunk in graph.astream(
-            initial_state(topic, rounds), stream_mode=["messages", "updates"]
-        ):
-            if mode == "messages":
+        stream_modes = ["messages", "updates", "custom"] if trace else ["messages", "updates"]
+        async for mode, chunk in graph.astream(initial_state(topic, rounds, trace), stream_mode=stream_modes):
+            if mode == "custom":  # trace events: (event, data)
+                event, data = chunk
+                yield _sse(event, data)
+            elif mode == "messages":
                 message, metadata = chunk
                 node = metadata.get("langgraph_node")
                 if node not in ("pro", "con"):
@@ -269,12 +285,15 @@ async def _debate_events(topic: str, rounds: int):
         yield _sse("done", {})
     except ModelBusyError as exc:
         # Timeout or overload: llm.py has already logged the details.
-        logger.warning("Debate stopped, model busy (topic=%r, rounds=%d)", topic, rounds)
-        yield _sse("error", {"message": str(exc)})
+        logger.warning("Debate stopped, model busy (topic=%r, rounds=%d, code=%s)", topic, rounds, exc.code)
+        yield _sse("error", {"message": str(exc), "code": exc.code})
     except Exception:
         # Full details stay in the server log; the client gets a generic message.
         logger.exception("Debate failed (topic=%r, rounds=%d)", topic, rounds)
-        yield _sse("error", {"message": "Something went wrong while running the debate. Please try again."})
+        yield _sse(
+            "error",
+            {"message": "Something went wrong while running the debate. Please try again.", "code": "model_unavailable"},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +312,7 @@ async def debate(body: DebateRequest, request: Request):
 
     logger.info("Debate started from %s: %r (%d rounds)", ip, body.topic, body.rounds)
     return EventSourceResponse(
-        _debate_events(body.topic, body.rounds),
+        _debate_events(body.topic, body.rounds, body.behind_the_scenes),
         headers=SSE_HEADERS,
         ping=15,  # keep-alive comments so proxies don't drop the connection while the judge thinks
     )
@@ -336,6 +355,7 @@ async def _room_events(room, body: RoomMessageRequest, request: Request):
             language=body.language,
             mode=body.mode,
             context=body.context,
+            trace=body.behind_the_scenes,
         ):
             if await request.is_disconnected():
                 logger.info("Client left room %s; stopped generating", room.id)
@@ -348,12 +368,15 @@ async def _room_events(room, body: RoomMessageRequest, request: Request):
         )
         raise
     except ModelBusyError as exc:
-        logger.warning("Room %s stopped, model busy", room.id)
-        yield _sse("error", {"message": str(exc)})
+        logger.warning("Room %s stopped, model busy (code=%s)", room.id, exc.code)
+        yield _sse("error", {"message": str(exc), "code": exc.code})
     except Exception:
         # Full details stay in the server log; the client gets a generic message.
         logger.exception("Room %s turn failed", room.id)
-        yield _sse("error", {"message": "Something went wrong in the chat. Please try sending that again."})
+        yield _sse(
+            "error",
+            {"message": "Something went wrong in the chat. Please try sending that again.", "code": "model_unavailable"},
+        )
 
 
 @app.get("/api/rooms")
@@ -402,9 +425,12 @@ async def room_summary(room_id: str, body: RoomContext, request: Request):
     except SummaryError as exc:
         return JSONResponse(status_code=422, content={"detail": str(exc)})
     except ModelBusyError as exc:
-        return JSONResponse(status_code=503, content={"detail": str(exc)})
+        return JSONResponse(status_code=503, content={"detail": str(exc), "code": exc.code})
     except Exception:
         logger.exception("Room %s summary failed", room_id)
-        return JSONResponse(status_code=500, content={"detail": "Couldn't run the vote right now. Please try again."})
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Couldn't run the vote right now. Please try again.", "code": "model_unavailable"},
+        )
     logger.info("Room %s summary finished in %.1fs", room_id, time.perf_counter() - started)
     return result

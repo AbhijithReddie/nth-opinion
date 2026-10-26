@@ -7,6 +7,7 @@ import type { RoomSetup } from "@/lib/chatTypes";
 import { BackdropBlobs } from "../../illustrations/Decor";
 import { RoomIllustration } from "../../illustrations/RoomIllustration";
 import { SampleSection } from "../../rooms/SampleSection";
+import { WatchDemoButton } from "../../replay/DemoNotice";
 import { Button } from "../../ui/Button";
 import { RoomSample } from "../RoomSample";
 import { LanguagePicker } from "./LanguagePicker";
@@ -26,10 +27,13 @@ export function SetupScreen({
   onSave,
   onCancel,
   onDraft,
+  onWatchDemo,
 }: {
   config: RoomChatConfig;
   initial: RoomSetup | null;
   onSave: (setup: RoomSetup) => void;
+  /** Starts the room's demo replay; leave out when the room has no recording. */
+  onWatchDemo?: () => void;
   /** Present when editing an existing room. */
   onCancel?: () => void;
   /** Called on save with the message to pre-fill in the chat ("" if none). */
@@ -214,6 +218,7 @@ export function SetupScreen({
             Cancel
           </Button>
         )}
+        {onWatchDemo && <WatchDemoButton onClick={onWatchDemo} />}
         <Button type="submit" size="lg" aria-describedby="setup-status">
           {initial ? "Save" : copy.create}
         </Button>

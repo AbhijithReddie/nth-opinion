@@ -6,7 +6,8 @@
  * Every way this can fail ends in a thrown DebateError.
  */
 
-import { StreamError, streamSse } from "./sseClient";
+import { StreamError, streamSse, type SlowState } from "./sseClient";
+import { TRACE_EVENT_TYPES } from "./trace";
 import type { DebateEvent } from "./types";
 
 export { API_URL } from "./sseClient";
@@ -15,7 +16,7 @@ export { StreamError as DebateError };
 export const TOPIC_MIN = 5;
 export const TOPIC_MAX = 200;
 
-const EVENT_TYPES = new Set(["turn_start", "token", "turn_end", "judge", "done", "error"]);
+const EVENT_TYPES = new Set(["turn_start", "token", "turn_end", "judge", "done", "error", ...TRACE_EVENT_TYPES]);
 const FINAL_EVENTS = new Set(["done", "error"]);
 
 export async function streamDebate(
@@ -23,14 +24,18 @@ export async function streamDebate(
   rounds: number,
   onEvent: (event: DebateEvent) => void,
   signal: AbortSignal,
+  onSlow?: (slow: SlowState) => void,
+  /** Also stream trace events for the "Behind the scenes" panel. */
+  behindTheScenes = false,
 ): Promise<void> {
   await streamSse<DebateEvent>({
     path: "/api/debate",
-    body: { topic, rounds },
+    body: behindTheScenes ? { topic, rounds, behind_the_scenes: true } : { topic, rounds },
     eventTypes: EVENT_TYPES,
     finalEvents: FINAL_EVENTS,
     onEvent,
     signal,
+    onSlow,
     messages: {
       unreachable: "Can't reach the arena server. Make sure the backend is running and try again.",
       slowStart: "The arena server took too long to respond. Please try again.",

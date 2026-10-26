@@ -4,7 +4,7 @@ import { LogoMark } from "@/components/brand/LogoMark";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { Footer } from "@/components/Footer";
 import { TECH_STACK } from "@/components/home/BuiltWith";
-import { HeartIcon } from "@/components/icons";
+import { EyeIcon, HeartIcon } from "@/components/icons";
 import { ButtonLink } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { DISCLAIMER, SITE_EXPLAINER, SITE_NAME, SITE_TAGLINE } from "@/config/site";
@@ -59,6 +59,18 @@ export default function AboutPage() {
               Typing indicators, messages and reactions stream to your browser as they happen, so it feels like real
               people typing.
             </Explainer>
+          </div>
+          <div className="flex gap-3 rounded-2xl border border-accent/40 bg-lavender-soft p-5">
+            <EyeIcon className="mt-0.5 size-5 shrink-0 text-accent-deep" />
+            <div>
+              <h3 className="font-display text-lg font-semibold">Watch it happen: Behind the scenes</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink/85">
+                Turn on &ldquo;Behind the scenes&rdquo; (the eye button in any room) to watch the agents work live. A
+                diagram of the room lights up as the safety check, the director and each persona run, a timeline lists
+                every decision the director makes and why, and counters show the turn&apos;s messages, reactions, steps
+                and time. It shows decisions and timings only, never the prompts behind them.
+              </p>
+            </div>
           </div>
         </section>
 

@@ -294,3 +294,30 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* "Behind the scenes" diagram: the running node pulses, the latest arrow flows. Both stop
+   for people who prefer reduced motion (see the rule above), leaving a static highlight. */
+@keyframes trace-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes trace-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.trace-node-glow {
+  animation: trace-pulse 1.4s ease-in-out infinite;
+}
+
+.trace-edge-hot {
+  stroke-dasharray: 6 6;
+  animation: trace-flow 0.6s linear infinite;
+}

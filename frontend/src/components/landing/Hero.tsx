@@ -1,4 +1,5 @@
 import { RoomIllustration } from "../illustrations/RoomIllustration";
+import { BehindTheScenesToggle } from "../trace/BehindTheScenesToggle";
 import { HowItWorks } from "./HowItWorks";
 
 /** Headline, one-line pitch, the podium illustration and the three-step explainer at the top of the page. */
@@ -19,6 +20,7 @@ export function Hero() {
         Give the arena any topic and watch two AI debaters fight it out in real time, then hear an AI judge score
         the clash.
       </p>
+      <BehindTheScenesToggle className="mt-5" />
       <HowItWorks />
     </header>
   );
