@@ -83,6 +83,16 @@ export default function AboutPage() {
               your pitch, a coach in your corner at an interview. Guests speak less, and never take over the room&apos;s
               main job: investors still decide and interviewers still score.
             </Explainer>
+            <Explainer title="Your documents">
+              Upload a resume, a job description, a pitch deck or notes in the rooms that use them. The file is read in
+              memory and never stored, only a short summary is shared with the room, and it isn&apos;t saved in your
+              browser either. Its text is sent to Google Gemini, which writes the replies. Instructions hidden in a
+              document are never followed; the room points them out as a red flag.
+            </Explainer>
+            <Explainer title="PDF reports">
+              At the end of every room, download a PDF report made in your browser: scores, feedback, checklists and
+              quizzes. Reports contain the room&apos;s results only, never your uploaded documents.
+            </Explainer>
           </div>
         </section>
 

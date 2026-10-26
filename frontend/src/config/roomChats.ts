@@ -9,6 +9,7 @@
 
 import type { RoomSetup } from "@/lib/chatTypes";
 import { toPersona } from "@/lib/customPersonas";
+import type { DocType } from "@/lib/documents";
 import { FUTURE_SELVES, GROUP_CHAT_FRIENDS, INTERVIEWERS, ROAST_PANEL, SHARKS, STUDY_BUDDIES, type Persona } from "./personas";
 
 export const LANGUAGES = [
@@ -36,6 +37,17 @@ export interface ContextFieldConfig {
   rows?: number;
   /** Extra check on the trimmed value; returns a message for the user, or null if it's fine. */
   validate?: (value: string) => string | null;
+  /** An uploaded document of this type can stand in for this (required) field. */
+  replacedBy?: DocType;
+}
+
+/** A document a room can take (see backend RoomConfig.documents). */
+export interface RoomDocumentConfig {
+  type: DocType;
+  /** Shown as "Recommended" rather than "Optional". */
+  recommended?: boolean;
+  /** What the room does with it. */
+  hint: string;
 }
 
 export type SummaryType = "poll" | "offers" | "scorecard" | "interview" | "letters" | "notes";
@@ -57,6 +69,8 @@ export interface RoomChatConfig {
   guests?: { max: number; role: string; /** Members + guests, when the room caps it. */ maxTotal?: number };
   /** The user's own personas ("My Friends") can also be regular members. */
   customMembers?: boolean;
+  /** Documents the user can upload or paste (kept in memory only). */
+  documents?: RoomDocumentConfig[];
   /** localStorage key for this room's setup and chat. */
   storageKey: string;
   personas: Persona[];
@@ -130,6 +144,7 @@ export const ROOM_CHATS = {
   },
   "shark-tank": {
     roomId: "shark-tank",
+    documents: [{ type: "pitch_deck", hint: "Investors test your claims and refer to slides by number." }],
     guests: { max: 1, role: "A friend in the audience who reacts and whispers advice to you." },
     storageKey: "huddle.room.shark-tank.v1",
     personas: SHARKS,
@@ -171,6 +186,7 @@ export const ROOM_CHATS = {
   },
   "roast-and-toast": {
     roomId: "roast-and-toast",
+    documents: [{ type: "resume", hint: "Upload a resume or project write-up instead of pasting it." }],
     guests: { max: 1, role: "A guest roaster with their own style." },
     storageKey: "huddle.room.roast-and-toast.v1",
     personas: ROAST_PANEL,
@@ -183,6 +199,7 @@ export const ROOM_CHATS = {
         placeholder: "Paste your resume, project README, portfolio text or pitch...",
         max: 6000,
         required: true,
+        replacedBy: "resume",
         multiline: true,
         hint: "Plain text works best. Remove your phone number, email and address before pasting.",
       },
@@ -214,6 +231,10 @@ export const ROOM_CHATS = {
   },
   "interview-panel": {
     roomId: "interview-panel",
+    documents: [
+      { type: "resume", recommended: true, hint: "The panel asks about your projects and experience." },
+      { type: "job_description", hint: "Questions are tailored to the role, and you get a job-match score at the end." },
+    ],
     guests: { max: 1, role: "A coach in your corner with a quick private tip between questions." },
     storageKey: "huddle.room.interview-panel.v1",
     personas: INTERVIEWERS,
@@ -226,6 +247,7 @@ export const ROOM_CHATS = {
         placeholder: "Paste your resume as plain text. The panel will ask about what's on it...",
         max: 6000,
         required: true,
+        replacedBy: "resume",
         multiline: true,
         hint: "Remove your phone number, email and address before pasting.",
       },
@@ -302,6 +324,7 @@ export const ROOM_CHATS = {
   },
   "study-group": {
     roomId: "study-group",
+    documents: [{ type: "notes", hint: "The group teaches and quizzes you from your notes." }],
     guests: { max: 1, role: "A guest classmate who joins the session." },
     storageKey: "huddle.room.study-group.v1",
     personas: STUDY_BUDDIES,

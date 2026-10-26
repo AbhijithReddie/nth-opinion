@@ -96,7 +96,8 @@ class StudyNotes(BaseModel):
     topic: str = Field(description="The topic, as a short title")
     key_points: list[str] = Field(description="3-6 key points, each one short, accurate sentence")
     memory_trick: str = Field(description="Tanvi's best mnemonic or analogy for the topic")
-    quiz: list[QuizItem] = Field(description="3-5 self-test questions with answers")
+    quiz: list[QuizItem] = Field(description="Exactly 5 self-test questions with answers")
+    analogies: list[str] = Field(default_factory=list, description="2-4 analogies, memes or jokes used in the session that help it stick")
     weak_spots: list[str] = Field(description="0-3 things the user struggled with in the chat (empty if none)")
     next_topics: list[str] = Field(description="2-3 topics to study next")
 
@@ -117,6 +118,7 @@ def _finalize_notes(notes: StudyNotes, participants: list[dict]) -> dict:
         "quiz": quiz,
         "weak_spots": [w.strip()[:200] for w in notes.weak_spots if w.strip()][:3],
         "next_topics": [t.strip()[:80] for t in notes.next_topics if t.strip()][:3],
+        "analogies": [a.strip()[:240] for a in notes.analogies if a.strip()][:4],
     }
 
 
@@ -156,10 +158,14 @@ STUDY_GROUP = register_room(
         "Tanvi makes it memorable. In quiz mode, ONE member asks one question per turn and the turn ends so the "
         "user can answer; when the user answers, the asker (or Ishaan) says if it's right and asks the next one. "
         "Keep turns to 2-3 messages in learn mode and 1-2 in quiz mode.",
+        documents={"notes": "optional"},
+        document_hint="The user shared their study notes: teach and quiz from them, explain the parts that look hard, "
+        "and gently point out anything in them that's wrong.",
         summary=SummarySpec(
             schema=StudyNotes,
             instructions="Write the study notes for this session: accurate key points at the user's level, "
-            "Tanvi's best memory trick, a short self-test with correct answers, the user's weak spots based on "
+            "Tanvi's best memory trick, the analogies and memes that came up, a 5-question self-test with correct "
+            "answers, the user's weak spots based on "
             "what they got wrong or asked about (empty list if none), and what to study next. Accuracy matters "
             "more than style.",
             finalize=_finalize_notes,

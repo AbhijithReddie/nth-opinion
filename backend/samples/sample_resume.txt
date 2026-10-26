@@ -1,0 +1,24 @@
+SAMPLE CANDIDATE (fictional fresher resume for demos)
+Email: sample.candidate@example.com | City: Pune
+
+EDUCATION
+B.Tech, Computer Science, Example Institute of Technology, 2025. CGPA 8.1/10.
+
+SKILLS
+Python (pandas, matplotlib), SQL, Power BI, Excel, Git, basic statistics.
+
+PROJECTS
+Retail sales dashboard (college project)
+- Built a Power BI dashboard on 50,000 orders from a public retail dataset.
+- Wrote SQL queries for monthly revenue, top products and repeat customers.
+- Found that 20% of products made 70% of revenue; presented it to the class.
+
+Canteen queue predictor (hackathon, 2nd place)
+- Predicted lunch rush times from 3 months of made-up order logs with a simple regression model.
+
+EXPERIENCE
+Data cleaning intern, Example Foods Pvt Ltd (fictional), 2 months, 2024
+- Cleaned and merged 12 customer spreadsheets in Python; cut manual work from 2 days to 2 hours.
+
+ACHIEVEMENTS
+- Organised the college coding club's data workshop for 60 students.

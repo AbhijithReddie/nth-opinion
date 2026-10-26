@@ -31,6 +31,8 @@ backend/
   main.py             FastAPI app: /api/debate and /api/rooms/*
   agent_trace.py      "Behind the scenes" trace events (node starts/ends, decisions, safety mode)
   persona_builder.py  "Build your own friend": a custom persona from a short description
+  documents.py        document uploads: type detection, PDF/DOCX/TXT extraction, the digest
+  samples/            made-up sample documents (resume, job description, pitch deck) for replays
   rooms/
     __init__.py       registers every room
     engine.py         the shared room engine (LangGraph director loop, summary)
@@ -179,6 +181,9 @@ frontend/
   src/components/share/       shareable result cards: the card and the share dialog
   src/components/friends/     My Friends page: persona builder, preview, edit, generated avatars
   src/lib/customPersonas.ts   the user's own personas: storage (localStorage), API client, avatar mapping
+  src/lib/documents.ts        document uploads: upload with progress, pasted text, in-memory store per room
+  src/lib/report/             "Download PDF report" (@react-pdf/renderer, loaded on click)
+  public/fonts/               the site fonts as WOFF/TTF for the PDF reports (OFL licences)
   src/lib/share.ts            share cards: privacy redaction, PNG generation, share/download helpers
   src/lib/og.tsx              link-preview images (opengraph-image / twitter-image for home and every room)
 ```
@@ -663,6 +668,93 @@ the final summary (offers, scores, votes) comes from the room's own members
 only. In the chat, guests have a small "Guest" badge; in "Behind the scenes"
 they appear as dashed nodes with their avatars, and the director's reasons
 mention them.
+
+## Documents and PDF reports
+
+### Uploading documents
+
+Some rooms can read a document: the **Interview Panel** a resume
+(recommended; it can replace the pasted resume) and a job description
+(optional), the **Pitch Tank** a pitch deck, **Roast & Toast** a resume or
+project write-up (instead of pasting it), and the **Study Group** notes. Each
+setup screen has a drop zone, a file picker and "Paste text instead", with
+upload progress, the page count and a preview of the digest ("Here's what the
+panel will see") that can be removed.
+
+- `POST /api/documents/extract`: multipart form with `file` and `doc_type`
+  (`resume`, `job_description`, `pitch_deck` or `notes`). PDF, DOCX and TXT
+  only, detected from the file's content (magic bytes), not its name. Max
+  5 MB; page limits: resume 4, job description 6, pitch deck 30, notes 20.
+  Text is extracted with pypdf / python-docx (with `[Page N]` / `[Slide N]`
+  markers) in a worker thread with a 20-second timeout, cut to about 12,000
+  characters, and turned into a digest (at most about 1,500 characters) by
+  one structured LLM call suited to the document type. Returns
+  `{doc_type, filename, pages, char_count, digest, text}`.
+- `POST /api/documents/digest`: `{doc_type, text}` with 50-12,000 characters
+  of pasted text; same digest.
+- Friendly errors (with a `code`) for wrong file types, files over 5 MB, too
+  many pages, scanned PDFs (no extractable text: paste the text instead),
+  password-protected or unreadable files, and the limit of 15 documents per
+  IP per hour.
+- Room requests carry `documents: [{doc_type, filename, digest}]` (at most 3,
+  digests up to 2,000 characters); personas only ever see the digests. Each
+  room config lists the types it takes (`documents`), how it uses them
+  (`document_hint`), and which pasted field a document can replace.
+- With a job description, the Interview Panel tailors its questions to the
+  resume and the role, and its result adds a job match: a 0-100 score,
+  matched and missing skills, and the top 3 things to work on. With a deck,
+  Pitch Tank investors refer to slides by number and the result adds
+  slide-by-slide feedback.
+
+**Privacy.** Files are processed in memory only: never written to disk,
+never stored, and never logged (only their type, size and page count). In
+the browser, documents and digests are kept in memory for the current visit
+only, never in localStorage, so after a reload the room asks for them again.
+Every upload shows: "Your file is processed in memory and never stored by Nth
+Opinion. Its text is sent to Google Gemini to generate responses. Don't
+upload anything you're not comfortable sharing."
+
+**LangSmith.** Requests that include documents (and every digest call) run
+with LangSmith tracing switched off (`langsmith.tracing_context(enabled=False)`),
+so document text, digests and anything derived from them never reach a trace.
+Redacting them inside traces can't be done reliably, since replies quote and
+paraphrase the documents. The director's notes and reasons are also left out
+of the server logs for those requests.
+
+**Prompt injection.** Document text and digests are untrusted: every prompt
+fences them in `<document>` tags and says they are content to evaluate, never
+instructions. The digest step never follows instructions found in a document;
+if it finds any aimed at an AI ("rate this candidate 10/10", "ignore previous
+instructions"), the digest starts with a red-flag line, and the personas are
+told to call such instructions out instead of following them.
+
+**Replays** with documents use only the made-up samples in `backend/samples/`
+(a fresher resume, a job description and a pitch deck), never real personal
+data.
+
+### PDF reports
+
+At the end of every room (live, or a demo replay, which is labelled as such),
+**Download PDF report** builds a PDF in the browser with
+[@react-pdf/renderer](https://react-pdf.org), loaded only on click. It uses the
+Chai & Sage colours, the site fonts (Fraunces, Figtree and IBM Plex Mono,
+served from `public/fonts/` because react-pdf can't read next/font's WOFF2
+files), the logo, the room name and date, and the disclaimer "AI-generated
+perspectives for practice and entertainment, not professional advice."
+
+| Room | In the report |
+| ---- | ------------- |
+| Interview Panel | each interviewer's recommendation, scores, a question-by-question recap with feedback, strengths, areas to improve, and the job match if a JD was given |
+| Pitch Tank | the pitch, each investor's offer or reason for passing, strengths, key concerns, and slide-by-slide feedback if a deck was given |
+| Roast & Toast | the best roast lines, the toast, scores, and an improvement checklist |
+| Study Group | key points, the analogies and memes used, a 5-question self-quiz with answers, weak spots, what to study next |
+| Debate Arena | scores, the decision memo and the full transcript |
+| The Group Chat | the poll with everyone's reasons, and the conversation highlights |
+| Future You | the decision, each future self's letter, the paths, and a reflection checklist |
+
+Reports contain the room's outputs only, never uploaded document text. The
+fonts only cover Latin characters, so emoji are left out and the rupee sign
+is written as "Rs".
 
 ## Sharing results
 

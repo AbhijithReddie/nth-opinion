@@ -93,6 +93,7 @@ export function ChatScreen({
         config,
         setup,
         demo: !!replayBar,
+        items: chat.items,
         userTexts: chat.items.flatMap((item) => (item.kind === "message" && item.sender === "user" ? [item.text] : [])),
       }}
     >

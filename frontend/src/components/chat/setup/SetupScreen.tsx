@@ -6,12 +6,14 @@ import { findBuiltIn, type Language, type RoomChatConfig } from "@/config/roomCh
 import { getRoom } from "@/config/rooms";
 import type { RoomSetup } from "@/lib/chatTypes";
 import { toPersona, useCustomPersonas, type CustomPersona } from "@/lib/customPersonas";
+import { DOC_LABELS, useRoomDocuments } from "@/lib/documents";
 import { BackdropBlobs } from "../../illustrations/Decor";
 import { RoomIllustration } from "../../illustrations/RoomIllustration";
 import { SampleSection } from "../../rooms/SampleSection";
 import { WatchDemoButton } from "../../replay/DemoNotice";
 import { Button } from "../../ui/Button";
 import { RoomSample } from "../RoomSample";
+import { DocumentUpload } from "./DocumentUpload";
 import { GuestPicker } from "./GuestPicker";
 import { LanguagePicker } from "./LanguagePicker";
 import { PersonaCard } from "./PersonaCard";
@@ -20,7 +22,8 @@ import { TextField } from "./TextField";
 /**
  * Create (or edit) a room: the title, the room's extra details (context fields),
  * the cast (picked and renamed, or a fixed panel; in the Group Chat the user's own
- * friends too), optional guests from other rooms or My Friends, and the language.
+ * friends too), optional guests from other rooms or My Friends, documents to upload
+ * (rooms that take them; kept in memory only), and the language.
  * Below the form, "See it in action" shows the room's sample conversation; its
  * "Try this example" button fills the form, and the example's first message is
  * handed to the chat (via `onDraft`) when the room is created.
@@ -32,7 +35,10 @@ export function SetupScreen({
   onCancel,
   onDraft,
   onWatchDemo,
+  notice,
 }: {
+  /** A message above the form, e.g. "upload your resume again". */
+  notice?: string;
   config: RoomChatConfig;
   initial: RoomSetup | null;
   onSave: (setup: RoomSetup) => void;
@@ -63,6 +69,9 @@ export function SetupScreen({
     return memberOptions.find((p) => p.id === id) ?? (custom ? toPersona(custom) : findBuiltIn(id)?.persona);
   };
   const maxTotal = config.guests?.maxTotal ?? Infinity;
+  // Uploaded documents (in memory only). A document can stand in for a required pasted field (e.g. a resume).
+  const documents = useRoomDocuments(config.roomId);
+  const covered = (f: { replacedBy?: string }) => !!f.replacedBy && documents.some((d) => d.doc_type === f.replacedBy);
   const roomFull = selected.length + guests.length >= maxTotal;
   // Chosen names for every persona, so renames survive deselecting and reselecting.
   const [names, setNames] = useState<Record<string, string>>(() => {
@@ -77,7 +86,7 @@ export function SetupScreen({
   const totalOk = selected.length + guests.length <= maxTotal;
   const namesOk = !cast.renamable || selected.every((id) => nameFor(id).trim().length > 0);
   const titleOk = !titleRequired || title.trim().length > 0;
-  const missingField = config.contextFields.find((f) => f.required && !context[f.id]?.trim());
+  const missingField = config.contextFields.find((f) => f.required && !context[f.id]?.trim() && !covered(f));
   // A field's own check (e.g. an age range), only once something has been typed.
   const invalidField = config.contextFields
     .map((f) => ({ field: f, error: context[f.id]?.trim() && f.validate ? f.validate(context[f.id].trim()) : null }))
@@ -92,7 +101,12 @@ export function SetupScreen({
   const blocker: { message: string; inputId?: string } | null = !titleOk
     ? { message: `Fill in “${config.title.label}” to continue.`, inputId: "room-title" }
     : missingField
-      ? { message: `Fill in “${missingField.label}” to continue.`, inputId: `context-${missingField.id}` }
+      ? {
+          message: missingField.replacedBy
+            ? `Fill in “${missingField.label}” or upload your ${DOC_LABELS[missingField.replacedBy].toLowerCase()} to continue.`
+            : `Fill in “${missingField.label}” to continue.`,
+          inputId: `context-${missingField.id}`,
+        }
       : invalidField
         ? { message: invalidField.error!, inputId: `context-${invalidField.field.id}` }
         : !countOk
@@ -166,6 +180,11 @@ export function SetupScreen({
           {initial ? copy.editHeading : copy.heading}
         </h1>
         <p className="mx-auto mt-2 max-w-md text-muted">{copy.intro}</p>
+        {notice && (
+          <p role="status" className="mx-auto mt-4 max-w-md rounded-xl border border-accent/40 bg-lavender-soft px-4 py-2.5 text-sm font-medium text-ink">
+            {notice}
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
           <Button variant="secondary" size="sm" onClick={tryExample}>
             Try this example
@@ -195,13 +214,27 @@ export function SetupScreen({
             onChange={(v) => setContext((c) => ({ ...c, [f.id]: v }))}
             placeholder={f.placeholder}
             max={f.max}
-            required={f.required}
-            hint={f.hint}
+            required={f.required && !covered(f)}
+            hint={f.replacedBy ? `${f.hint ?? ""} Or upload your ${DOC_LABELS[f.replacedBy].toLowerCase()} below instead.`.trim() : f.hint}
             multiline={f.multiline}
             rows={f.rows}
           />
         ))}
       </div>
+
+      {config.documents && (
+        <section aria-labelledby="documents-title" className="mt-8">
+          <h2 id="documents-title" className="font-display text-lg font-semibold">
+            Documents
+          </h2>
+          <p className="text-sm text-muted">Upload a file or paste the text. Only a short summary is shared with the room.</p>
+          <div className="mt-3 space-y-3">
+            {config.documents.map((d) => (
+              <DocumentUpload key={d.type} roomId={config.roomId} config={d} doc={documents.find((doc) => doc.doc_type === d.type)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <fieldset className="mt-8">
         <legend className="flex w-full items-baseline justify-between gap-3">

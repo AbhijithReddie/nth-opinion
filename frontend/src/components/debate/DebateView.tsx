@@ -7,6 +7,7 @@ import type { Speaker, Turn } from "@/lib/types";
 import { ErrorBanner } from "../ErrorBanner";
 import { getRoom } from "@/config/rooms";
 import { DemoNotice } from "../replay/DemoNotice";
+import { DownloadReportButton } from "../share/DownloadReportButton";
 import { ShareButton } from "../share/ShareDialog";
 import { DecisionMemo } from "./DecisionMemo";
 import { JudgeDeliberating } from "./JudgeDeliberating";
@@ -115,6 +116,11 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = fa
       {phase === "done" && (
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           {verdict && <ShareButton result={{ kind: "debate", topic, verdict }} room={getRoom("debate")} demo={demo} />}
+          {verdict && (
+            <DownloadReportButton
+              input={() => ({ kind: "debate", roomTitle: getRoom("debate").title, demo, topic, rounds, turns, verdict })}
+            />
+          )}
           <NewDebateButton onClick={onNewDebate} />
         </div>
       )}

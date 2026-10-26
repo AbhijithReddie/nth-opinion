@@ -8,6 +8,11 @@ Endpoints:
     POST /api/rooms/{room_id}/message   -> SSE stream of the room's replies
     POST /api/rooms/{room_id}/summary   -> the room's final structured output (JSON)
     POST /api/personas/generate         -> a custom persona from a short description (JSON)
+    POST /api/documents/extract         -> text + digest of an uploaded PDF / DOCX / TXT (multipart)
+    POST /api/documents/digest          -> digest of pasted text (JSON)
+
+Rooms that take documents get them as short digests ("documents"); the files
+themselves are processed in memory only and never stored (see documents.py).
 
 Room requests may also carry "guests" (personas from other rooms, or the
 user's own) and "custom_personas" (the user's own personas, sent inline: the
@@ -54,7 +59,7 @@ import time
 from collections import defaultdict, deque
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -63,6 +68,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from graph import graph, initial_state
 from llm import ModelBusyError, content_text
+import documents as docs
 from persona_builder import PersonaRefused, generate_persona
 from rooms import ROOMS, SummaryError, get_room, stream_turn, summarize
 from rooms.engine import build_cast
@@ -133,6 +139,14 @@ class CustomPersona(BaseModel):
     typical_stance: _text(1, 200)
 
 
+class RoomDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    doc_type: docs.DocType
+    filename: _text(1, 120)
+    digest: _text(1, 2000)
+
+
 class RoomContext(BaseModel):
     """What every room request carries: the recent chat, who's in the room, and the language.
 
@@ -151,6 +165,8 @@ class RoomContext(BaseModel):
     guests: list[Participant] = Field(default_factory=list, max_length=2)
     # The user's own personas used as members or guests in this request.
     custom_personas: list[CustomPersona] = Field(default_factory=list, max_length=6)
+    # The user's documents, as digests only (POST /api/documents/*). Untrusted; never traced or logged.
+    documents: list[RoomDocument] = Field(default_factory=list, max_length=3)
 
 
 class RoomMessageRequest(RoomContext):
@@ -178,12 +194,22 @@ def _room_validation_message(fields: set[str]) -> str:
         return "One of your own friends couldn't be read. Check their name and descriptions on the My Friends page."
     if "guests" in fields:
         return "Rooms take at most 2 guests."
+    if "documents" in fields:
+        return "A document couldn't be read. Remove it and add it again (at most 3 per room)."
     return 'Invalid request. Send JSON like {"message": "...", "history": [], "friends": [...], "language": "english"}.'
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Return a short readable message instead of Pydantic's raw error list."""
+    if request.url.path.startswith("/api/documents"):
+        fields = {str(part) for err in exc.errors() for part in err.get("loc", ())}
+        message = (
+            f"Paste between {docs.MIN_PASTED} and {docs.MAX_TEXT:,} characters."
+            if "text" in fields
+            else "Choose a file and a document type (resume, job_description, pitch_deck or notes)."
+        )
+        return JSONResponse(status_code=422, content={"detail": message})
     if request.url.path.startswith("/api/personas"):
         fields = {str(part) for err in exc.errors() for part in err.get("loc", ())}
         return JSONResponse(status_code=422, content={"detail": _persona_validation_message(fields)})
@@ -233,6 +259,9 @@ debate_limiter = RateLimiter(
 )
 room_message_limiter = RateLimiter(
     40, "Your friends need a breather! You've sent 40 messages this hour. Try again a little later."
+)
+document_limiter = RateLimiter(
+    15, "That's 15 documents this hour. Take a break and try again a little later, or paste the key parts instead."
 )
 persona_limiter = RateLimiter(
     10, "That's 10 new friends this hour! Give the builder a break and try again a little later."
@@ -370,7 +399,9 @@ def _room_or_error(room_id: str, body: RoomContext):
     if problem is None and body.language not in room.languages:
         problem = f"This room supports: {', '.join(room.languages)}."
     if problem is None:
-        problem = room.validate_context(body.context)
+        problem = room.validate_documents([d.model_dump() for d in body.documents]) or room.validate_context(
+            body.context, [d.doc_type for d in body.documents]
+        )
     if problem:
         return None, JSONResponse(status_code=422, content={"detail": problem})
     return room, None
@@ -404,6 +435,7 @@ async def _room_events(room, body: RoomMessageRequest, request: Request):
             participants=members,
             guests=guests,
             custom=custom,
+            documents=[d.model_dump() for d in body.documents],
             language=body.language,
             mode=body.mode,
             context=body.context,
@@ -474,6 +506,7 @@ async def room_summary(room_id: str, body: RoomContext, request: Request):
             participants=members,
             guests=guests,
             custom=custom,
+            documents=[d.model_dump() for d in body.documents],
             language=body.language,
             context=body.context,
         )
@@ -530,3 +563,59 @@ async def personas_generate(body: PersonaRequest, request: Request):
             content={"detail": "Couldn't build your friend right now. Please try again.", "code": "model_unavailable"},
         )
     return persona
+
+
+# ---------------------------------------------------------------------------
+# Documents (uploads and pasted text -> digest). In memory only; contents never logged.
+# ---------------------------------------------------------------------------
+def _document_error(exc: Exception) -> JSONResponse:
+    if isinstance(exc, docs.DocumentError):
+        return JSONResponse(status_code=exc.status, content={"detail": str(exc), "code": exc.code})
+    if isinstance(exc, ModelBusyError):
+        return JSONResponse(status_code=503, content={"detail": str(exc), "code": exc.code})
+    logger.error("Document digest failed (%s)", type(exc).__name__)  # no traceback: it could quote the document
+    return JSONResponse(
+        status_code=500, content={"detail": "Couldn't read that document right now. Please try again.", "code": "model_unavailable"}
+    )
+
+
+@app.post("/api/documents/extract")
+async def documents_extract(
+    request: Request,
+    file: UploadFile = File(...),
+    doc_type: str = Form(...),
+):
+    if doc_type not in docs.MAX_PAGES:
+        return JSONResponse(status_code=422, content={"detail": "Unknown document type.", "code": "bad_type"})
+    ip = _client_ip(request)
+    if not document_limiter.allow(ip):
+        return document_limiter.reject(ip, "document")
+    # Read at most one byte past the limit, so a huge upload is never held in memory.
+    data = await file.read(docs.MAX_BYTES + 1)
+    await file.close()
+    try:
+        text, pages, _ = await docs.extract(data, doc_type)
+        digest = await docs.build_digest(doc_type, text)
+    except Exception as exc:  # noqa: BLE001  (every failure becomes a friendly message)
+        return _document_error(exc)
+    filename = (file.filename or "document").rsplit("/", 1)[-1].rsplit("\\", 1)[-1][:120]
+    return {"doc_type": doc_type, "filename": filename, "pages": pages, "char_count": len(text), "digest": digest, "text": text}
+
+
+class PastedDocument(BaseModel):
+    doc_type: docs.DocType
+    text: _text(docs.MIN_PASTED, docs.MAX_TEXT)
+
+
+@app.post("/api/documents/digest")
+async def documents_digest(body: PastedDocument, request: Request):
+    ip = _client_ip(request)
+    if not document_limiter.allow(ip):
+        return document_limiter.reject(ip, "document")
+    text = docs.truncate(body.text)
+    try:
+        digest = await docs.build_digest(body.doc_type, text)
+    except Exception as exc:  # noqa: BLE001
+        return _document_error(exc)
+    logger.info("Digested pasted %s: %d characters", body.doc_type, len(text))
+    return {"doc_type": body.doc_type, "filename": "Pasted text", "pages": 1, "char_count": len(text), "digest": digest, "text": text}

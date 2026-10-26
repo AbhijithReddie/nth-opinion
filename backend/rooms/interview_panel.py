@@ -81,12 +81,29 @@ class Competency(BaseModel):
     note: str = Field(description="One short line explaining the score")
 
 
+class QuestionRecap(BaseModel):
+    question: str = Field(description="A question the panel asked, short")
+    answer: str = Field(description="One line summarising the candidate's answer")
+    feedback: str = Field(description="One line of feedback on that answer")
+
+
+class JobMatch(BaseModel):
+    score: int = Field(description="How well the candidate fits the job description, 0-100")
+    matched_skills: list[str] = Field(description="Must-have or nice-to-have skills the candidate showed or has")
+    missing_skills: list[str] = Field(description="Skills the job asks for that are missing or weak")
+    focus: list[str] = Field(description="The top 3 things to work on for this role")
+
+
 class InterviewResult(BaseModel):
     summary: str = Field(description="One or two sentences on how the interview went overall")
     verdicts: list[PanelVerdict] = Field(description="Exactly one verdict per interviewer")
     competencies: list[Competency] = Field(description="3 to 5 competencies relevant to the role")
     strengths: list[str] = Field(description="2-3 specific strengths shown in the answers")
     improvements: list[str] = Field(description="2-3 specific, actionable things to improve for the next interview")
+    recap: list[QuestionRecap] = Field(default_factory=list, description="Each question the panel asked, in order (up to 8)")
+    job_match: JobMatch | None = Field(
+        default=None, description="ONLY if a job description document was provided: the job-match analysis. Otherwise null"
+    )
 
 
 HIRE = {"strong_hire", "hire"}
@@ -117,6 +134,24 @@ def _finalize_interview(result: InterviewResult, participants: list[dict]) -> di
         "competencies": competencies,
         "strengths": [s.strip()[:200] for s in result.strengths if s.strip()][:3],
         "improvements": [s.strip()[:200] for s in result.improvements if s.strip()][:3],
+        "recap": [
+            {"question": q.question.strip()[:200], "answer": q.answer.strip()[:240], "feedback": q.feedback.strip()[:240]}
+            for q in result.recap
+            if q.question.strip()
+        ][:8],
+        "job_match": _clean_match(result.job_match),
+    }
+
+
+def _clean_match(match: JobMatch | None) -> dict | None:
+    if match is None:
+        return None
+    clean = lambda items, n: [i.strip()[:80] for i in items if i.strip()][:n]  # noqa: E731
+    return {
+        "score": max(0, min(100, int(match.score))),
+        "matched_skills": clean(match.matched_skills, 8),
+        "missing_skills": clean(match.missing_skills, 8),
+        "focus": [f.strip()[:160] for f in match.focus if f.strip()][:3],
     }
 
 
@@ -139,6 +174,7 @@ INTERVIEW_PANEL = register_room(
         max_participants=3,
         context_fields=(
             ContextField(id="role", label="Role the candidate is interviewing for", max_length=80),
+            # Optional when a resume document is uploaded instead (document_replaces below).
             ContextField(id="resume", label="The candidate's resume (pasted text)", max_length=6000),
             ContextField(id="company", label="Company or kind of company", max_length=80, required=False),
         ),
@@ -165,8 +201,17 @@ INTERVIEW_PANEL = register_room(
             "no_hire, strong_no_hire) with a reason that cites a specific answer. Score 3-5 competencies "
             "relevant to the role from 1 to 5, list specific strengths and actionable improvements. Judge only "
             "what the candidate actually said; if they answered only a few questions, say there was limited "
-            "signal and be cautious. This is interview practice, not a real hiring decision.",
+            "signal and be cautious. This is interview practice, not a real hiring decision. Recap each question "
+            "the panel asked with a one-line answer summary and feedback. Only if a job description document is "
+            "provided, add the job match: a 0-100 fit score, matched and missing skills, and the top 3 things to "
+            "work on for that role.",
             finalize=_finalize_interview,
+            doc_fields={"job_match": "job_description"},
         ),
+        documents={"resume": "recommended", "job_description": "optional"},
+        document_replaces={"resume": "resume"},
+        document_hint="Interview from the documents: ask about specific projects and experience on the resume and, if "
+        "there is a job description, test the role's must-have skills and responsibilities. Tailor every question "
+        "to both the resume and the role.",
     )
 )

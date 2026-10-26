@@ -1,0 +1,22 @@
+JUNIOR DATA ANALYST (FRESHER) - Example Retail Analytics (fictional company)
+Location: Pune (hybrid)
+
+About the role
+You will turn sales and customer data into dashboards and insights for our merchandising team.
+
+Must-have skills
+- SQL: joins, group by, window functions
+- Excel or Google Sheets: pivot tables, lookups
+- One BI tool: Power BI or Tableau
+- Clear communication of findings to non-technical teams
+
+Nice to have
+- Python (pandas) for data cleaning
+- Basic statistics and A/B testing
+- Retail or e-commerce data experience
+
+Responsibilities
+- Build and maintain weekly sales dashboards
+- Answer ad-hoc questions from category managers
+- Clean and validate data from store systems
+- Present one insight per month to the leadership team

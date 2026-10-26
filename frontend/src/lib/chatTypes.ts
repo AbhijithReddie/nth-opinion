@@ -65,6 +65,8 @@ export interface InvestorDecision {
 
 export interface Offers {
   summary: string;
+  /** Only when a pitch deck was shared. */
+  slide_feedback?: { slide: number; feedback: string }[];
   strengths: string[];
   concerns: string[];
   decisions: InvestorDecision[];
@@ -88,6 +90,10 @@ export interface InterviewResult {
   competencies: { name: string; score: number; note: string }[];
   strengths: string[];
   improvements: string[];
+  /** Each question the panel asked, with a one-line answer summary and feedback. */
+  recap?: { question: string; answer: string; feedback: string }[];
+  /** Only when a job description was shared. */
+  job_match?: { score: number; matched_skills: string[]; missing_skills: string[]; focus: string[] } | null;
 }
 
 /** Future You summary: "Get letters from future you". */
@@ -107,6 +113,8 @@ export interface StudyNotes {
   quiz: { question: string; answer: string }[];
   weak_spots: string[];
   next_topics: string[];
+  /** Analogies, memes and jokes from the session. */
+  analogies?: string[];
 }
 
 /** A room's final output: its type and data. */

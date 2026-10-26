@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ROOM_CHATS, type RoomChatId } from "@/config/roomChats";
 import { useBehindTheScenes } from "@/hooks/useBehindTheScenes";
 import { useRoomDemo } from "@/hooks/useRoomDemo";
+import { DOC_LABELS, useRoomDocuments } from "@/lib/documents";
 import { isValidSetup, useRoomChat, type RoomReplayPlayback } from "@/hooks/useRoomChat";
 import { ReplayClock, type RoomReplay } from "@/lib/replay";
 import { ReplayRoom } from "../replay/ReplayRoom";
@@ -28,6 +29,14 @@ export default function RoomChat({ roomId }: { roomId: RoomChatId }) {
       ? () => setPlayback({ recording, clock: new ReplayClock() })
       : undefined;
 
+  // Documents live in memory only: after a reload, a room that relied on one (instead of pasted text) asks for it again.
+  const documents = useRoomDocuments(chat.config.roomId);
+  const missingDoc = chat.setup
+    ? chat.config.contextFields.find(
+        (f) => f.required && f.replacedBy && !chat.setup!.context[f.id]?.trim() && !documents.some((d) => d.doc_type === f.replacedBy),
+      )?.replacedBy
+    : undefined;
+
   if (playback) {
     return (
       <main id="main" className="flex-1">
@@ -36,15 +45,20 @@ export default function RoomChat({ roomId }: { roomId: RoomChatId }) {
     );
   }
 
-  if (chat.editing || !chat.setup) {
+  if (chat.editing || !chat.setup || missingDoc) {
     return (
       <main id="main" className="flex-1">
         <SetupScreen
           config={chat.config}
           initial={chat.setup}
           onSave={chat.saveSetup}
+          notice={
+            missingDoc
+              ? `Please add your ${DOC_LABELS[missingDoc].toLowerCase()} again: documents are only kept until you reload or close the page.`
+              : undefined
+          }
           onCancel={
-            chat.setup
+            chat.setup && !missingDoc
               ? () => {
                   setDraft("");
                   chat.cancelEdit();

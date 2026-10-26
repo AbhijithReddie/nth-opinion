@@ -78,11 +78,19 @@ class InvestorDecision(BaseModel):
     reason: str = Field(description="One short line (under 20 words) in the investor's own voice")
 
 
+class SlideNote(BaseModel):
+    slide: int = Field(description="The slide number")
+    feedback: str = Field(description="One line of feedback on that slide")
+
+
 class Offers(BaseModel):
     summary: str = Field(description="One sentence on how the pitch went overall")
     strengths: list[str] = Field(description="2-3 short strengths of the pitch or business")
     concerns: list[str] = Field(description="2-3 short concerns or open questions")
     decisions: list[InvestorDecision] = Field(description="Exactly one decision per investor")
+    slide_feedback: list[SlideNote] = Field(
+        default_factory=list, description="ONLY if a pitch deck document was provided: feedback on 3-8 key slides"
+    )
 
 
 def _clean_list(items: list[str], limit: int = 3) -> list[str]:
@@ -119,6 +127,9 @@ def _finalize_offers(result: Offers, participants: list[dict]) -> dict:
         "strengths": _clean_list(result.strengths),
         "concerns": _clean_list(result.concerns),
         "decisions": decisions,
+        "slide_feedback": [
+            {"slide": max(1, int(n.slide)), "feedback": n.feedback.strip()[:200]} for n in result.slide_feedback if n.feedback.strip()
+        ][:8],
     }
 
 
@@ -160,7 +171,11 @@ SHARK_TANK = register_room(
         "challenge or ask something new. Investors may react to each other (e.g. Rustom doubting Aditya's "
         "optimism). Never leave the founder with more than 2 unanswered questions: end the turn so they can "
         "reply. Use reactions sparingly, e.g. 🔥 for strong traction or 😬 for a weak answer.",
+        documents={"pitch_deck": "optional"},
+        document_hint="The founder shared their pitch deck. Reference specific slides by number (e.g. \"On slide 4 you "
+        "claim...\"), and test the claims and numbers on them.",
         summary=SummarySpec(
+            doc_fields={"slide_feedback": "pitch_deck"},
             schema=Offers,
             instructions="The founder has asked for offers. Each investor decides, in character, to make an "
             "offer or go out, based ONLY on what the founder actually said (traction, numbers, answers to "

@@ -165,6 +165,7 @@ ROAST_AND_TOAST = register_room(
         modes=MODES,
         context_fields=(
             ContextField(id="title", label="What's being reviewed", max_length=60),
+            # Optional when a resume document is uploaded instead (document_replaces below).
             ContextField(id="material", label="The material (pasted text)", max_length=6000),
             ContextField(id="goal", label="The user's goal", max_length=120, required=False),
         ),
@@ -180,6 +181,10 @@ ROAST_AND_TOAST = register_room(
         "real feedback; Nandini usually leads with fixes, Sameer judges it against the user's goal, and Kabir "
         "turns his earlier jokes into advice. When the user asks a question, the most relevant panelist "
         "answers first. End each turn after 2-3 messages so the user can respond.",
+        documents={"resume": "optional"},
+        document_replaces={"material": "resume"},
+        document_hint="The material under review is (or includes) the user's resume document: roast and review what's "
+        "actually in it.",
         summary=SummarySpec(
             schema=Scorecard,
             instructions="Produce the panel's final scorecard for the material, based on the material itself and "

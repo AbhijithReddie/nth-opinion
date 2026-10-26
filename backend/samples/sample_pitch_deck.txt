@@ -1,0 +1,26 @@
+[Slide 1]
+GharKaDabba (fictional startup for demos): home-cooked lunch, delivered to offices.
+
+[Slide 2]
+Problem: office workers in tech parks spend Rs 250+ on unhealthy lunches; home cooks have spare capacity but no customers.
+
+[Slide 3]
+Solution: an app that matches home cooks with nearby office workers for subscription lunch boxes.
+
+[Slide 4]
+Traction: live in 2 tech parks in Pune, 40 home cooks, 600 monthly subscribers, Rs 3.2 lakh monthly revenue (made-up numbers).
+
+[Slide 5]
+Business model: Rs 2,400 monthly subscription; we keep 20%. Delivery by our own runners.
+
+[Slide 6]
+Market: 1.2 million office workers in Pune tech parks; Rs 900 crore yearly lunch spend (illustrative estimate).
+
+[Slide 7]
+Competition: food delivery apps and canteens. Our edge: home food at canteen prices, fixed menu planning.
+
+[Slide 8]
+Team: two founders, one ex-operations at a fictional delivery company, one engineer.
+
+[Slide 9]
+The ask: Rs 40 lakh for 8% equity, to expand to 6 tech parks and hire 10 runners.

@@ -66,6 +66,33 @@ export function InterviewCard({ result, ts }: { result: InterviewResult; ts: num
         <Feedback title="You did well" items={result.strengths} className="text-pro-deep" marker="+" />
         <Feedback title="Work on this next" items={result.improvements} className="text-con-deep" marker="→" />
       </div>
+
+      {/* Only when a job description was uploaded. */}
+      {result.job_match && (
+        <div className="mt-4 border-t border-line pt-3 text-sm">
+          <p className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.18em] text-muted uppercase">
+            Job match
+            <span className="font-display text-xl font-semibold tracking-normal text-ink normal-case">{result.job_match.score}/100</span>
+          </p>
+          <div
+            role="meter"
+            aria-label="Job match"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={result.job_match.score}
+            className="mt-1.5 h-2 overflow-hidden rounded-full bg-sand"
+          >
+            <div className="h-full rounded-full bg-pro" style={{ width: `${result.job_match.score}%` }} />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Feedback title="Skills you match" items={result.job_match.matched_skills} className="text-pro-deep" marker="✓" />
+            <Feedback title="Missing for this role" items={result.job_match.missing_skills} className="text-con-deep" marker="·" />
+          </div>
+          <div className="mt-3">
+            <Feedback title="Top 3 to work on" items={result.job_match.focus} className="text-accent-deep" marker="→" />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

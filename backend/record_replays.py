@@ -13,6 +13,10 @@ with 1 round.
     python record_replays.py --force          # re-record rooms that already have one
     python record_replays.py --gap 8          # seconds between LLM calls (default 5)
 
+Rooms that take documents get made-up sample documents from backend/samples/
+(never real personal data): the Interview Panel a resume and a job description,
+the Pitch Tank a pitch deck. The recording keeps their digests.
+
 The examples are read with Node through the frontend's own TypeScript loader
 (jiti), so run `npm install` in frontend/ first. Needs backend/.env like the API.
 """
@@ -27,6 +31,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import documents as docs
 import graph as debate_graph
 import llm
 import rooms.engine as room_engine
@@ -36,6 +41,12 @@ from rooms import get_room, stream_turn, summarize
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 REPLAY_DIR = FRONTEND / "public" / "replays"
+SAMPLES = Path(__file__).resolve().parent / "samples"
+# Made-up documents for rooms that take them: (doc type, file in backend/samples/).
+SAMPLE_DOCS = {
+    "interview-panel": [("resume", "sample_resume.txt"), ("job_description", "sample_job_description.txt")],
+    "shark-tank": [("pitch_deck", "sample_pitch_deck.txt")],
+}
 DEBATE_ROUNDS = 1
 LANGUAGE = "english"
 
@@ -153,7 +164,15 @@ async def record_room(room_id: str, example: dict, clock: Clock) -> dict:
     context = dict(setup["context"])
     if chat["contextKey"]:
         context[chat["contextKey"]] = setup["title"]
-    problem = room.validate_participants(setup["participants"]) or room.validate_context(context)
+    documents = [
+        {"doc_type": t, "filename": f, "digest": await docs.build_digest(t, docs.truncate((SAMPLES / f).read_text(encoding="utf-8")))}
+        for t, f in SAMPLE_DOCS.get(room_id, [])
+    ]
+    problem = (
+        room.validate_participants(setup["participants"])
+        or room.validate_documents(documents)
+        or room.validate_context(context, [d["doc_type"] for d in documents])
+    )
     if problem:
         raise RecordingFailed(problem)
 
@@ -169,6 +188,7 @@ async def record_room(room_id: str, example: dict, clock: Clock) -> dict:
         language=LANGUAGE,
         context=context,
         trace=True,
+        documents=documents,
     ):
         events.append({"t": clock.offset_ms(), "event": event, "data": data})
 
@@ -180,15 +200,18 @@ async def record_room(room_id: str, example: dict, clock: Clock) -> dict:
     ]
     result = None
     if room.summary:
-        result = await summarize(room, history=history, participants=setup["participants"], language=LANGUAGE, context=context)
-    return {"setup": setup, "message": message, "events": events, "summary": result}
+        result = await summarize(
+            room, history=history, participants=setup["participants"], language=LANGUAGE, context=context, documents=documents
+        )
+    # The sample documents' digests are kept (they're made up); the frontend never sends them anywhere.
+    return {"setup": setup, "message": message, "documents": documents, "events": events, "summary": result}
 
 
 async def record(room_ids: list[str], examples: dict, gap: float) -> int:
     clock = Clock(gap)
     # Every LLM call (debate, safety check, director, personas, summary) goes through llm.invoke.
     throttled = clock.throttle(llm.invoke)
-    debate_graph.invoke = room_engine.invoke = room_safety.invoke = throttled
+    debate_graph.invoke = room_engine.invoke = room_safety.invoke = docs.invoke = throttled
 
     failures = 0
     REPLAY_DIR.mkdir(parents=True, exist_ok=True)

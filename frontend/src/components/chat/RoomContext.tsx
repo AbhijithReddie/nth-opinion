@@ -3,7 +3,7 @@
 import { createContext, useContext } from "react";
 import { isGuest, resolvePersona, type RoomChatConfig } from "@/config/roomChats";
 import type { Persona } from "@/config/personas";
-import type { RoomSetup } from "@/lib/chatTypes";
+import type { ChatItem, RoomSetup } from "@/lib/chatTypes";
 
 interface RoomContextValue {
   config: RoomChatConfig;
@@ -12,6 +12,8 @@ interface RoomContextValue {
   demo?: boolean;
   /** What the user typed in the chat, kept off share cards unless they include it. */
   userTexts?: string[];
+  /** The whole chat, for PDF reports. */
+  items?: ChatItem[];
 }
 
 const RoomContext = createContext<RoomContextValue | null>(null);
@@ -22,13 +24,14 @@ export const RoomProvider = RoomContext.Provider;
 export function useRoom() {
   const value = useContext(RoomContext);
   if (!value) throw new Error("useRoom must be used inside <RoomProvider>");
-  const { config, setup, demo = false, userTexts = [] } = value;
+  const { config, setup, demo = false, userTexts = [], items = [] } = value;
 
   return {
     config,
     setup,
     demo,
     userTexts,
+    items,
     /** A persona in this room (its own, a guest, or one of the user's own), or undefined for "user" / unknown ids. */
     persona: (id: string): Persona | undefined => resolvePersona(config, setup, id),
     /** True for a cross-room guest. */

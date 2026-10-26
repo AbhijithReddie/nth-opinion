@@ -19,6 +19,7 @@ import type {
   SummaryItem,
 } from "./chatTypes";
 import { toWire } from "./customPersonas";
+import { documentsForRequest } from "./documents";
 import { API_URL, readError, StreamError, streamSse, type SlowState } from "./sseClient";
 import { TRACE_EVENT_TYPES } from "./trace";
 
@@ -47,6 +48,8 @@ function roomBody(config: RoomChatConfig, setup: RoomSetup, items: ChatItem[]) {
     // Only rooms set up with guests or the user's own personas send these.
     ...(setup.guests?.length ? { guests: setup.guests } : {}),
     ...(setup.custom?.length ? { custom_personas: setup.custom.map(toWire) } : {}),
+    // The digests of any uploaded documents (held in memory only, never saved).
+    ...(documentsForRequest(config.roomId).length ? { documents: documentsForRequest(config.roomId) } : {}),
   };
 }
 

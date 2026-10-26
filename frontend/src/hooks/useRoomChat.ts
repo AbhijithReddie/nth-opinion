@@ -63,7 +63,8 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 export function isValidSetup(config: RoomChatConfig, s: Partial<RoomSetup> | undefined): s is RoomSetup {
   if (!s || typeof s.title !== "string" || !LANGUAGES.some((l) => l.id === s.language)) return false;
   if (!s.context || typeof s.context !== "object") return false;
-  if (config.contextFields.some((f) => f.required && !s.context?.[f.id]?.trim())) return false;
+  // A field a document can stand in for may be empty (documents aren't saved; RoomChat asks for them again).
+  if (config.contextFields.some((f) => f.required && !f.replacedBy && !s.context?.[f.id]?.trim())) return false;
   if (config.title.contextKey && !s.title.trim()) return false;
   const people = s.participants;
   const guests = s.guests ?? [];
