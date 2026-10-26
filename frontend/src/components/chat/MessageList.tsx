@@ -63,7 +63,7 @@ export function MessageList({ items, typing, onTryExample }: { items: ChatItem[]
       ) : (
         <ol aria-label="Messages" aria-live="polite" aria-relevant="additions" className="flex flex-col">
           {items.map((item, i) => {
-            if (item.kind === "summary") return <SummaryCard key={item.id} item={item} />;
+            if (item.kind === "summary") return <SummaryCard key={item.id} item={item} shareable />;
             if (item.kind === "mode") return <ModeDivider key={item.id} mode={item.mode} />;
             const prev = items[i - 1];
             const grouped = prev?.kind === "message" && prev.sender === item.sender && !item.replyTo;

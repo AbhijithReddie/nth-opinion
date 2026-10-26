@@ -5,7 +5,9 @@ import type { DebateState } from "@/hooks/useDebate";
 import { SIDES } from "@/lib/sides";
 import type { Speaker, Turn } from "@/lib/types";
 import { ErrorBanner } from "../ErrorBanner";
+import { getRoom } from "@/config/rooms";
 import { DemoNotice } from "../replay/DemoNotice";
+import { ShareButton } from "../share/ShareDialog";
 import { DecisionMemo } from "./DecisionMemo";
 import { JudgeDeliberating } from "./JudgeDeliberating";
 import { NewDebateButton } from "./NewDebateButton";
@@ -19,6 +21,8 @@ interface DebateViewProps {
   onRetry: () => void;
   /** Offers the demo replay on the error, when the AI is unavailable and there's a recording. */
   onWatchDemo?: () => void;
+  /** This is a demo replay (the share card says so). */
+  demo?: boolean;
 }
 
 /** Who speaks next while no turn is streaming: Pro opens each round, Con answers it. */
@@ -29,7 +33,7 @@ function nextTurn(turns: Turn[]): { speaker: Speaker; round: number } {
 }
 
 /** The live debate: topic, Pro/Con turns round by round, then the judge's verdict. */
-export function DebateView({ state, onNewDebate, onRetry, onWatchDemo }: DebateViewProps) {
+export function DebateView({ state, onNewDebate, onRetry, onWatchDemo, demo = false }: DebateViewProps) {
   const { phase, topic, rounds, turns, verdict, error } = state;
   const verdictRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
@@ -109,7 +113,8 @@ export function DebateView({ state, onNewDebate, onRetry, onWatchDemo }: DebateV
       )}
 
       {phase === "done" && (
-        <div className="flex justify-center pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          {verdict && <ShareButton result={{ kind: "debate", topic, verdict }} room={getRoom("debate")} demo={demo} />}
           <NewDebateButton onClick={onNewDebate} />
         </div>
       )}

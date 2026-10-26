@@ -8,6 +8,10 @@ import type { RoomSetup } from "@/lib/chatTypes";
 interface RoomContextValue {
   config: RoomChatConfig;
   setup: RoomSetup;
+  /** This is a demo replay (share cards say so). */
+  demo?: boolean;
+  /** What the user typed in the chat, kept off share cards unless they include it. */
+  userTexts?: string[];
 }
 
 const RoomContext = createContext<RoomContextValue | null>(null);
@@ -18,11 +22,13 @@ export const RoomProvider = RoomContext.Provider;
 export function useRoom() {
   const value = useContext(RoomContext);
   if (!value) throw new Error("useRoom must be used inside <RoomProvider>");
-  const { config, setup } = value;
+  const { config, setup, demo = false, userTexts = [] } = value;
 
   return {
     config,
     setup,
+    demo,
+    userTexts,
     /** A persona of this room, or undefined for "user" / unknown ids. */
     persona: (id: string): Persona | undefined => personaById(config, id),
     /** "You", the user's chosen name for a persona, or the persona's own name. */

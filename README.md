@@ -175,6 +175,9 @@ frontend/
   src/lib/trace.ts            "Behind the scenes": trace event types and the panel's reducer
   src/config/flows.ts         each room's agent diagram for the "Behind the scenes" panel
   src/components/trace/       the "Behind the scenes" panel, diagram, mobile sheet and toggle
+  src/components/share/       shareable result cards: the card and the share dialog
+  src/lib/share.ts            share cards: privacy redaction, PNG generation, share/download helpers
+  src/lib/og.tsx              link-preview images (opengraph-image / twitter-image for home and every room)
 ```
 
 To list a new room, add it to `src/config/rooms.ts`. The navbar, home grid
@@ -599,6 +602,46 @@ the director's own short explanation (at most about 20 words), or a fixed
 sentence when the turn-taking rules changed its choice. Trace events never
 include prompts, persona instructions, model output beyond the chat itself,
 keys or error details. Without the flag, nothing is sent and nothing changes.
+
+## Sharing results
+
+When a room reaches its result (the debate verdict, a poll, offers, an
+interview result, a scorecard, letters or study notes), a **Share** button
+appears under it, in live chats and in demo replays (whose cards say "From a
+demo conversation"). It opens a preview of a card in the Chai & Sage theme:
+the room's illustration and accent, the logo, the result, and a "Get your Nth
+Opinion" footer with the site address.
+
+| Room | On the card |
+| ---- | ----------- |
+| Debate Arena | The motion, the winner and both sides' scores |
+| The Group Chat | The poll, vote bars and 2-3 friends' reasons |
+| Pitch Tank | The startup's one-line pitch and each investor's offer or "I'm out" |
+| Interview Panel | Overall score, top strength and one thing to improve |
+| Roast & Toast | The best roast line and the most useful real tip |
+| Future You | The key advice from each future self |
+| Study Group | The topic and "3 things I learned" |
+
+- **Sizes:** square (1080x1080) or story (1080x1920).
+- **Privacy:** in The Group Chat, Future You, Interview Panel and Roast &
+  Toast, the user's own question and personal details stay off the card
+  unless they tick "Include my question". Until then, every distinctive word
+  they typed (in the chat, the resume or other setup details: names, places,
+  companies, anything with a number) is blanked out, and the Interview Panel
+  shows only competency names instead of its written feedback.
+- **Image:** the PNG is made in the browser from a hidden full-size copy of
+  the card with [modern-screenshot](https://github.com/qq15725/modern-screenshot),
+  which keeps the web fonts and SVG illustrations.
+- **Actions:** Share (the Web Share API with the image, shown only where the
+  browser supports sharing files, mostly phones), Download image, and Copy
+  link (copies the site address).
+
+The site address comes from `NEXT_PUBLIC_SITE_URL` (default
+`https://nth-opinion.vercel.app`), which is also the metadata base for link
+previews. The home page and every room have their own Open Graph and Twitter
+images (`opengraph-image.tsx` / `twitter-image.tsx`, drawn by `src/lib/og.tsx`
+with the room's title, description and illustration), so links shared on
+WhatsApp, LinkedIn and X show a proper preview.
 
 ## Deploying the backend on Render
 

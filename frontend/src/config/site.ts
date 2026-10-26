@@ -6,8 +6,8 @@ export const SITE_EXPLAINER = "One question. A room full of AI minds.";
 export const SITE_DESCRIPTION =
   "One question. A room full of AI minds. Bring a problem to a room of AI personas with different personalities. A director agent decides who speaks, so it feels like a real conversation.";
 
-/** Public URL of the site, used for absolute Open Graph links. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+/** Public URL of the site: the metadata base for link previews, and the address printed on share cards. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nth-opinion.vercel.app").replace(/\/+$/, "");
 
 // TODO: replace with your repository URL.
 export const GITHUB_URL = "https://github.com/your-username/nth-opinion";

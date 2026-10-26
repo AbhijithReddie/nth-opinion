@@ -87,7 +87,14 @@ export function ChatScreen({
   );
 
   return (
-    <RoomProvider value={{ config, setup }}>
+    <RoomProvider
+      value={{
+        config,
+        setup,
+        demo: !!replayBar,
+        userTexts: chat.items.flatMap((item) => (item.kind === "message" && item.sender === "user" ? [item.text] : [])),
+      }}
+    >
       <div className={behindTheScenes && wide ? "mx-auto flex w-full max-w-6xl" : "contents"}>
         <div className="mx-auto flex h-[calc(100dvh-65px)] w-full max-w-3xl min-w-0 flex-col overflow-hidden chat-paper sm:border-x sm:border-line sm:shadow-soft">
           <ChatHeader

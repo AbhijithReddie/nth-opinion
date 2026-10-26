@@ -105,7 +105,7 @@ export function Arena() {
               className="sticky top-20 z-30 rounded-2xl border shadow-soft"
             />
             <div className="mt-8">
-              <DebateView state={demo.state} onNewDebate={exitDemo} onRetry={exitDemo} />
+              <DebateView state={demo.state} onNewDebate={exitDemo} onRetry={exitDemo} demo />
             </div>
           </>
         )}
